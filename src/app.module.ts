@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuditModule } from './audit/audit.module';
-import { TranscriptorModule } from './transcriptor/transcriptor.module';
 import {
   I18nModule,
   AcceptLanguageResolver,
@@ -25,12 +24,10 @@ import { RulesModule } from './administration/rules/rules.module';
 import { SensitiveFieldsModule } from './privacy/sensitive-fields.module';
 import { CustomersModule } from './administration/customers/customers.module';
 import { RealtimeModule } from './_common/realtime/realtime.module';
-import { ProjectsModule } from './projects-management/projects/projects.module';
-import { ScopeModule } from './projects-management/scope/scope.module';
-import { ContractsModule } from './projects-management/contracts/contracts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WhatsAppModule } from './_common/whatsapp/whatsapp.module';
 import { TrackingModule } from './_common/tracking/tracking.module';
+import { AiModule } from './_ai/ai.module';
 
 @Module({
   imports: [
@@ -85,15 +82,12 @@ import { TrackingModule } from './_common/tracking/tracking.module';
     RulesModule,
     SensitiveFieldsModule,
     CustomersModule,
-    ProjectsModule,
-    ScopeModule,
-    ContractsModule,
     NotificationsModule,
     RealtimeModule,
     WhatsAppModule,
     TrackingModule,
+    AiModule,
     AuditModule,
-    TranscriptorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

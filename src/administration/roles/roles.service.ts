@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets, QueryFailedError, In } from 'typeorm';
+import { Repository, Brackets, QueryFailedError } from 'typeorm';
 import { RedisService } from '../../_common/redis/redis.service';
 import { I18nService, I18nContext } from 'nestjs-i18n';
 import { Role } from './role.entity';
@@ -43,22 +43,6 @@ export class RolesService {
     private redis: RedisService,
     private i18n: I18nService,
   ) {}
-
-  private readonly TRANSCRIPTION_RULE_NAMES = [
-    'transcriptions.read',
-    'transcriptions.create',
-    'transcriptions.update',
-    'transcriptions.delete',
-    'transcriptions.chat.read',
-    'transcriptions.chat.create',
-    'transcriptions.chat.delete',
-    'transcriptions.comments.read',
-    'transcriptions.comments.create',
-    'transcriptions.comments.update',
-    'transcriptions.comments.delete',
-    'transcriptions.summaries.read',
-    'transcriptions.summaries.create',
-  ];
 
   private getLang() {
     return I18nContext.current()?.lang;
@@ -198,38 +182,6 @@ export class RolesService {
 
     const message = await this.i18n.translate('roles.rule_unlinked', { lang });
     return { message };
-  }
-
-  /**
-   * Ativa todas as regras de transcrição (incl. chat, comments, summaries) para o usuário.
-   * Usado para autoativação ou liberação via pagamento/trial.
-   */
-  async activateTranscriptionRulesForUser(userId: string, requesterId: string) {
-    const lang = this.getLang();
-    await this.requireUserInCompanyOrThrow(userId, requesterId);
-
-    const rules = await this.ruleRepo.find({
-      where: {
-        name: In(this.TRANSCRIPTION_RULE_NAMES),
-        deletedAt: null,
-      } as any,
-      select: { id: true } as any,
-    });
-
-    for (const rule of rules) {
-      await this.addRuleToUser(userId, rule.id, requesterId, {
-        source: 'manual',
-        expiresAt: null,
-      });
-    }
-
-    await this.redis.del(`authz:rules:${userId}`);
-
-    const message = await this.i18n.translate(
-      'roles.transcription_rules_activated',
-      { lang },
-    );
-    return { message, data: { activatedCount: rules.length } };
   }
 
   async create(data: CreateRoleInput, requesterId: string) {

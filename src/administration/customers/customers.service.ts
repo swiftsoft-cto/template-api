@@ -13,6 +13,7 @@ import {
   QueryFailedError,
   Brackets,
   In,
+  IsNull,
   EntityManager,
 } from 'typeorm';
 import { I18nService, I18nContext } from 'nestjs-i18n';
@@ -453,7 +454,7 @@ export class CustomersService {
   async deleteCustomer(id: string) {
     const exists = await this.customerRepo.findOne({ where: { id } });
     if (!exists) throw new NotFoundException('Customer not found');
-    await this.customerRepo.delete({ id });
+    await this.customerRepo.softDelete({ id });
     return { message: 'Customer deleted' };
   }
 
@@ -876,7 +877,7 @@ export class CustomersService {
     if (owner.kind !== 'COMPANY')
       throw new BadRequestException('Customer is not a company');
     return this.companyPersonLinkRepo.find({
-      where: { companyId: owner.company!.id } as any,
+      where: { companyId: owner.company!.id, deletedAt: IsNull() } as any,
       relations: ['person', 'person.customer'],
       order: { isPrimary: 'DESC', createdAt: 'DESC' } as any,
     });
@@ -1005,6 +1006,7 @@ export class CustomersService {
     for (const b of branches) {
       if (b.child?.company?.links?.length) {
         b.child.company.links = b.child.company.links
+          .filter((l: any) => !l.deletedAt)
           .filter((l) => l.isPrimary)
           .slice(0, 1);
       }
@@ -1371,6 +1373,10 @@ export class CustomersService {
       ] as any,
       order: { links: { isPrimary: 'DESC', createdAt: 'DESC' } } as any,
     });
+    // Exclui links soft-deleted (TypeORM pode incluí-los em relations)
+    if (company?.links?.length) {
+      company.links = company.links.filter((l: any) => !l.deletedAt);
+    }
 
     // 👇 NOVO: buscar o vínculo onde ESTE customer é o filho (filial)
     const parentLink = await manager.findOne(CustomerEntities.CustomerBranch, {
@@ -1391,6 +1397,7 @@ export class CustomersService {
     for (const b of branches) {
       if (b.child?.company?.links?.length) {
         b.child.company.links = b.child.company.links
+          .filter((l: any) => !l.deletedAt)
           .filter((l) => l.isPrimary)
           .slice(0, 1);
       }

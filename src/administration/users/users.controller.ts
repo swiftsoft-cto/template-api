@@ -109,13 +109,6 @@ export class UsersController {
     return this.usersService.findOneDynamic(requesterId, requesterId);
   }
 
-  @Post('me/activate-transcription-rules')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  async activateTranscriptionRules(@User('userId') userId: string) {
-    return this.rolesService.activateTranscriptionRulesForUser(userId, userId);
-  }
-
   @Get('me/extra-rules')
   @UseGuards(JwtAuthGuard)
   async getMyExtraRules(@User('userId') userId: string) {

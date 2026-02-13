@@ -120,31 +120,6 @@ async function upsertRules() {
     { name: 'customers.branches.create', description: 'Criar ou vincular filiais de clientes' },
     { name: 'customers.branches.delete', description: 'Excluir filiais de clientes' },
 
-    // ========== Projects Management - Projects ==========
-    { name: 'projects.read', description: 'Visualizar projetos' },
-    { name: 'projects.create', description: 'Criar projetos' },
-    { name: 'projects.update', description: 'Editar projetos' },
-    { name: 'projects.delete', description: 'Excluir projetos' },
-    { name: 'projects.manager', description: 'Gerenciar projetos (recebe notificações)' },
-
-    // ========== Projects Management - Contracts ==========
-    { name: 'projects-management.contracts.read', description: 'Visualizar contratos' },
-    { name: 'projects-management.contracts.create', description: 'Criar contratos' },
-    { name: 'projects-management.contracts.update', description: 'Editar contratos' },
-    { name: 'projects-management.contracts.delete', description: 'Excluir contratos' },
-    { name: 'projects-management.contracts.download.read', description: 'Baixar contratos (PDF/DOCX)' },
-    { name: 'projects-management.contracts.preview.create', description: 'Gerar preview de contratos' },
-    { name: 'projects-management.contracts.templates.read', description: 'Visualizar templates de contratos' },
-    { name: 'projects-management.contracts.templates.create', description: 'Criar templates de contratos' },
-    { name: 'projects-management.contracts.templates.update', description: 'Editar templates de contratos' },
-    { name: 'projects-management.contracts.templates.delete', description: 'Excluir templates de contratos' },
-
-    // ========== Projects Management - Scope ==========
-    { name: 'projects-management.scopes.read', description: 'Visualizar escopos de projeto' },
-    { name: 'projects-management.scopes.create', description: 'Criar escopos de projeto' },
-    { name: 'projects-management.scopes.update', description: 'Editar escopos de projeto' },
-    { name: 'projects-management.scopes.delete', description: 'Excluir escopos de projeto' },
-
     // ========== Privacy - Sensitive Fields ==========
     { name: 'privacy.sensitive-fields.read', description: 'Visualizar campos sensíveis' },
     { name: 'privacy.sensitive-fields.create', description: 'Criar campos sensíveis' },
@@ -156,32 +131,6 @@ async function upsertRules() {
     { name: 'notifications.create', description: 'Criar notificações' },
     { name: 'notifications.update', description: 'Atualizar notificações (marcar como lida)' },
     { name: 'notifications.delete', description: 'Excluir notificações' },
-
-    // ========== Transcriptions ==========
-    { name: 'transcriptions.read', description: 'Visualizar transcrições, mídia, insights e compartilhamentos' },
-    { name: 'transcriptions.create', description: 'Criar transcrições, tags, insights e links de compartilhamento' },
-    { name: 'transcriptions.update', description: 'Editar transcrições' },
-    { name: 'transcriptions.delete', description: 'Excluir transcrições, tags e revogar links de compartilhamento' },
-
-    // ========== Transcriptions - Chat ==========
-    { name: 'transcriptions.chat.read', description: 'Visualizar threads e mensagens do chat' },
-    { name: 'transcriptions.chat.create', description: 'Enviar mensagens no chat' },
-    { name: 'transcriptions.chat.delete', description: 'Excluir threads do chat' },
-
-    // ========== Transcriptions - Comments ==========
-    { name: 'transcriptions.comments.read', description: 'Visualizar comentários' },
-    { name: 'transcriptions.comments.create', description: 'Criar comentários' },
-    { name: 'transcriptions.comments.update', description: 'Editar comentários' },
-    { name: 'transcriptions.comments.delete', description: 'Excluir comentários' },
-
-    // ========== Transcriptions - Summaries ==========
-    { name: 'transcriptions.summaries.read', description: 'Visualizar resumos' },
-    { name: 'transcriptions.summaries.create', description: 'Gerar resumos' },
-
-    // ========== Transcription Shares (compartilhar com usuários) ==========
-    { name: 'transcription_shares.create', description: 'Compartilhar transcrição com outros usuários' },
-    { name: 'transcription_shares.read', description: 'Visualizar usuários com quem a transcrição está compartilhada' },
-    { name: 'transcription_shares.delete', description: 'Remover compartilhamento de transcrição' },
 
     // ========== AI - Usage ==========
     { name: 'ai.usage.read', description: 'Visualizar uso de IA' },

@@ -70,7 +70,7 @@ function main() {
 
   // Arquivos a ignorar
   const ignore = ['package-lock.json', 'yarn.lock', 'diff.js', 'diff.txt', 'AI_TEMPLATES_OPTIMIZATION.md', 'OAB_FIELD_DOCUMENTATION.md', 'PGVECTOR_SETUP.md', 'prisma',
-     'render.js', 'scripts', 'extract-docx/teste-juridico.json', 'extract-docx/teste-juridico.docx', 'extract-docx/extract-docx', 'extract-docx/extract.js', 'extract-docx/render.js', 'extract-docx/saida.docx' ];
+     'render.js', 'scripts' ];
 
   // Diff principal (tracked)
   const diffArgs = ['diff', '-M', '-C', '--no-ext-diff', '--color=never', baseRef, '--', '.'];

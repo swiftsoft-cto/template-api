@@ -96,27 +96,7 @@ async criarTransacao(dados: CreateTransactionDto) {
 }
 ```
 
-### Exemplo 2: Notificação sobre Processo Jurídico
-
-```typescript
-// No módulo jurídico
-async criarProcesso(dados: CreateProcessDto) {
-  const processo = await this.processesRepo.save(dados);
-  
-  // Notificar múltiplos usuários
-  await this.notificationsService.createMany(
-    [processo.responsibleUserId, processo.clientUserId],
-    'Novo processo jurídico',
-    `O processo ${processo.number} foi criado e está aguardando análise`,
-    'legal',
-    processo.id,
-  );
-  
-  return processo;
-}
-```
-
-### Exemplo 3: Notificar Todos os Usuários de um Departamento
+### Exemplo 2: Notificar Todos os Usuários de um Departamento
 
 ```typescript
 async notificarDepartamento(departmentId: string, titulo: string, mensagem: string) {
