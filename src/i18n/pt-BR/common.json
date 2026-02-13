@@ -1,0 +1,10 @@
+{
+  "not_found": "Registro não encontrado",
+  "already_exists": "{field} já existe",
+  "field_already_exists": "{field} já existe",
+  "person_already_linked": "Esta pessoa já está vinculada à empresa",
+  "database_error": "Erro no banco de dados",
+  "validation_failed": "Falha na validação",
+  "internal_error": "Erro interno do servidor",
+  "file_too_large": "Arquivo muito grande. O tamanho máximo permitido é {limit}"
+} 

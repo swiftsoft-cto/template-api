@@ -1,0 +1,19 @@
+{
+  "created": "Role created successfully",
+  "listed": "Roles listed successfully",
+  "empty": "No roles found",
+  "found": "Role found",
+  "updated": "Role updated successfully",
+  "deleted": "Role deleted successfully",
+  "users_listed": "Role users listed successfully",
+  "user_linked": "User linked to role successfully",
+  "user_unlinked": "User unlinked from role successfully",
+  "user_roles_listed": "User roles listed successfully",
+  "name_already_exists": "A role with this name already exists in this company",
+  "user_not_in_company": "User does not belong to the same company as the role",
+  "rules_listed": "Rules listed successfully",
+  "rules_empty": "No rules found",
+  "departments_listed": "Departments listed successfully",
+  "department_linked": "Department linked to role successfully",
+  "department_unlinked": "Department unlinked from role successfully"
+}

@@ -1,0 +1,12 @@
+{
+  "not_found": "User with id {id} not found",
+  "created": "User created successfully",
+  "updated": "User updated successfully",
+  "deleted": "User deleted successfully",
+  "listed": "Users listed successfully",
+  "found": "User found successfully",
+  "empty": "No users found.",
+  "email_already_exists": "Email already exists",
+  "email_soft_deleted": "Cannot create a new account with an email that was already removed.",
+  "already_deleted": "User is already removed."
+} 

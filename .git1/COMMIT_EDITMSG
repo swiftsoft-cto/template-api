@@ -1,0 +1,7 @@
+Add Folder Sharing Functionality to Transcription Shares Module
+
+- Introduced endpoints in TranscriptionSharesController for sharing, unsharing, and listing users with whom folders are shared.
+- Enhanced TranscriptionSharesService to manage folder sharing logic, including access checks and recursive folder visibility.
+- Created TranscriptionFolderSharedWith entity to track folder sharing relationships.
+- Updated DTOs to include ShareFolderWithUserDto for sharing folder data.
+- Modified TranscriptionsService to incorporate folder sharing checks in transcription visibility logic, improving user experience in accessing shared content.

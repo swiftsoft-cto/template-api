@@ -1,0 +1,1428 @@
+diff --git a/src/ai-docs/ai-docs.module.ts b/src/ai-docs/ai-docs.module.ts
+index f5814b3..ef2abcf 100644
+--- a/src/ai-docs/ai-docs.module.ts
++++ b/src/ai-docs/ai-docs.module.ts
+@@ -13,6 +13,7 @@ import { DraftsController } from './controllers/drafts.controller';
+ import { ChatController } from './controllers/chat.controller';
+ import { SuggestionsController } from './controllers/suggestions.controller';
+ import { SubCategoriesController } from './controllers/subcategories.controller';
++import { BaseStyleController } from './controllers/base-style.controller';
+ 
+ import { OcrService } from './services/ocr.service';
+ import { ChunkerService } from './services/chunker.service';
+@@ -26,6 +27,8 @@ import { ExportService } from './services/export.service';
+ import { ChatService } from './services/chat.service';
+ import { SuggestionsService } from './services/suggestions.service';
+ import { DocumentAnalysisService } from './services/document-analysis.service';
++import { CategoryStylesService } from './services/category-styles.service';
++import { BaseStylesService } from './services/base-styles.service';
+ import { AiWsGateway } from './gateways/ai-ws.gateway';
+ 
+ @Module({
+@@ -48,6 +51,7 @@ import { AiWsGateway } from './gateways/ai-ws.gateway';
+     DraftsController,
+     ChatController,
+     SuggestionsController,
++    BaseStyleController,
+   ],
+   providers: [
+     OcrService,
+@@ -62,6 +66,8 @@ import { AiWsGateway } from './gateways/ai-ws.gateway';
+     ChatService,
+     SuggestionsService,
+     DocumentAnalysisService,
++    CategoryStylesService,
++    BaseStylesService,
+     AiWsGateway,
+   ],
+   exports: [RagService, GenerationService],
+diff --git a/src/ai-docs/controllers/base-style.controller.ts b/src/ai-docs/controllers/base-style.controller.ts
+new file mode 100644
+index 0000000..deacf42
+--- /dev/null
++++ b/src/ai-docs/controllers/base-style.controller.ts
+@@ -0,0 +1,168 @@
++import {
++  BadRequestException,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Post,
++  UploadedFile,
++  UseInterceptors,
++  Req,
++  Res,
++  Query,
++} from '@nestjs/common';
++import { FileInterceptor } from '@nestjs/platform-express';
++import { diskStorage } from 'multer';
++import * as os from 'os';
++import * as path from 'path';
++import * as fs from 'fs';
++import type { Response } from 'express';
++import { PrismaService } from '../../_common/prisma/prisma.service';
++import { StorageClientService } from '../../_common/storage-client/storage-client.service';
++import { Authz } from '../../auth/decorators/rule.decorator';
++import { User } from '../../_common/decorators/user.decorator';
++import { BaseStylesService } from '../services/base-styles.service';
++
++@Controller('ai/base-style')
++export class BaseStyleController {
++  constructor(
++    private prisma: PrismaService,
++    private baseStyles: BaseStylesService,
++    private storage: StorageClientService,
++  ) {}
++
++  @Get()
++  @Authz('ai.styles.base.read')
++  async get(@User('userId') userId: string) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    const data = await this.baseStyles.getCompanyBaseStyles(me.companyId);
++    return { message: 'Ok', data };
++  }
++
++  @Post()
++  @Authz('ai.styles.base.update')
++  @HttpCode(HttpStatus.CREATED)
++  @UseInterceptors(
++    FileInterceptor('file', {
++      storage: diskStorage({
++        destination: os.tmpdir(),
++        filename: (_req, file, cb) =>
++          cb(
++            null,
++            `base-style-${Date.now()}${path.extname(file.originalname || '.docx')}`,
++          ),
++      }),
++      limits: { fileSize: 25 * 1024 * 1024 },
++    }),
++  )
++  async upload(
++    @UploadedFile() file: Express.Multer.File,
++    @User('userId') userId: string,
++  ) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    if (!file) throw new BadRequestException('Envie um arquivo .docx');
++    const isDocx =
++      /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/i.test(
++        file.mimetype || '',
++      ) || (file.originalname || '').toLowerCase().endsWith('.docx');
++    if (!isDocx) {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++      throw new BadRequestException(
++        'Formato inválido. Envie um .docx (Word OOXML).',
++      );
++    }
++    if (file.size > 25 * 1024 * 1024) {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++      throw new BadRequestException('O arquivo excede 25 MB.');
++    }
++
++    try {
++      const buffer = fs.readFileSync(file.path);
++      const saved = await this.baseStyles.attachBaseStyleDocxToCompany({
++        companyId: me.companyId!,
++        fileBuffer: buffer,
++        originalname: file.originalname,
++        mimetype: file.mimetype,
++      });
++      return { message: 'Documento base atualizado', fileId: saved.fileId };
++    } finally {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++    }
++  }
++
++  @Delete()
++  @Authz('ai.styles.base.update')
++  async remove(@User('userId') userId: string) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++    await this.baseStyles.removeCompanyBaseStyle(me.companyId);
++    return { message: 'Documento base removido' };
++  }
++
++  @Get('docx')
++  @Authz('ai.styles.base.read')
++  async download(
++    @User('userId') userId: string,
++    @Req() req: any,
++    @Res() res: Response,
++    @Query('v') version?: string,
++  ) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    const c = await this.prisma.company.findFirstOrThrow({
++      where: { id: me.companyId },
++      select: { baseStyleFileId: true },
++    });
++    if (!c.baseStyleFileId) {
++      throw new BadRequestException('Documento Base não configurado.');
++    }
++
++    // Cabeçalhos de cache semelhantes aos templates: ETag / ?v / 304
++    const etag = `"${c.baseStyleFileId}"`;
++    const ifNoneMatch = req.headers?.['if-none-match'];
++
++    if (version === c.baseStyleFileId) {
++      res.setHeader('ETag', etag);
++      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
++      res.setHeader('Vary', 'Authorization');
++    } else {
++      if (ifNoneMatch === etag) {
++        res.status(304).end();
++        return;
++      }
++      res.setHeader('ETag', etag);
++      res.setHeader('Vary', 'Authorization');
++    }
++
++    // Stream do storage (DOCX)
++    await this.storage.pipeStreamToResponse(
++      c.baseStyleFileId,
++      res,
++      'DocumentoBase.docx',
++    );
++  }
++}
+diff --git a/src/ai-docs/controllers/cases.controller.ts b/src/ai-docs/controllers/cases.controller.ts
+index b13ed2c..9300e28 100644
+--- a/src/ai-docs/controllers/cases.controller.ts
++++ b/src/ai-docs/controllers/cases.controller.ts
+@@ -68,68 +68,28 @@ export class CasesController {
+     if (type) where.type = type;
+     if (customerId?.trim()) where.customerId = customerId.trim();
+ 
+-    // Filtros por departamento e categoria através de joins
+-    if (departmentId?.trim() || categoryId?.trim()) {
+-      // Busca casos que têm categorias relacionadas ao departamento/categoria filtrados
+-      const categoryFilters: any = {
+-        deletedAt: null,
+-        companyId: me.companyId,
+-      };
+-
+-      if (departmentId?.trim()) {
+-        categoryFilters.departmentId = departmentId.trim();
+-      }
+-      if (categoryId?.trim()) {
+-        categoryFilters.id = categoryId.trim();
+-      }
++    // 🔹 Filtro direto por categoria (peça)
++    if (categoryId?.trim()) {
++      where.categoryId = categoryId.trim();
++    }
+ 
+-      const relatedCategories = await this.prisma.aiCategory.findMany({
+-        where: categoryFilters,
++    // 🔹 Filtro por departamento via categorias
++    if (departmentId?.trim()) {
++      const cats = await this.prisma.aiCategory.findMany({
++        where: {
++          deletedAt: null,
++          companyId: me.companyId,
++          departmentId: departmentId.trim(),
++        },
+         select: { id: true },
+       });
+-
+-      const categoryIds = relatedCategories.map((c) => c.id);
+-
+-      if (categoryIds.length > 0) {
+-        // Para filtrar por categoria, vamos buscar casos que estão relacionados
+-        // através de templates que usam essas categorias
+-        const templatesWithCategories = await this.prisma.aiTemplate.findMany({
+-          where: {
+-            deletedAt: null,
+-            companyId: me.companyId,
+-            categoryId: { in: categoryIds },
+-          },
+-          select: { id: true },
+-        });
+-
+-        const templateIds = templatesWithCategories.map((t) => t.id);
+-
+-        if (templateIds.length > 0) {
+-          // Busca drafts que usam esses templates
+-          const draftsWithTemplates = await this.prisma.aiDraft.findMany({
+-            where: {
+-              templateId: { in: templateIds },
+-            },
+-            select: { caseId: true },
+-          });
+-
+-          const caseIds = [
+-            ...new Set(draftsWithTemplates.map((d) => d.caseId)),
+-          ];
+-
+-          if (caseIds.length > 0) {
+-            where.id = { in: caseIds };
+-          } else {
+-            // Se não há casos relacionados, retorna vazio
+-            where.id = { in: [] };
+-          }
+-        } else {
+-          // Se não há templates relacionados, retorna vazio
+-          where.id = { in: [] };
+-        }
++      const ids = cats.map((c) => c.id);
++      // Se não houver categorias no depto, devolve vazio SEM erro de cast em UUID
++      if (ids.length) {
++        where.categoryId = { in: ids };
+       } else {
+-        // Se não há categorias relacionadas, retorna vazio
+-        where.id = { in: [] };
++        // força conjunto vazio
++        where.id = '00000000-0000-0000-0000-000000000000';
+       }
+     }
+ 
+@@ -271,7 +231,14 @@ export class CasesController {
+   @Authz('ai.cases.create')
+   @HttpCode(HttpStatus.CREATED)
+   async createCase(
+-    @Body() body: { type: string; requestText: string; customerId?: string },
++    @Body()
++    body: {
++      type: string;
++      requestText: string;
++      customerId?: string;
++      categoryId?: string; // ✅ novo
++      templateIds?: string[]; // ✅ novo
++    },
+     @User('userId') userId: string,
+   ) {
+     const me = await this.prisma.user.findFirstOrThrow({
+@@ -289,12 +256,45 @@ export class CasesController {
+       });
+     }
+ 
++    // Validar categoryId se fornecido
++    if (body.categoryId) {
++      await this.prisma.aiCategory.findFirstOrThrow({
++        where: {
++          id: body.categoryId,
++          deletedAt: null,
++          companyId: me.companyId,
++        },
++        select: { id: true },
++      });
++    }
++
++    // Validar templateIds se fornecidos
++    if (Array.isArray(body.templateIds) && body.templateIds.length) {
++      const found = await this.prisma.aiTemplate.findMany({
++        where: {
++          id: { in: body.templateIds },
++          deletedAt: null,
++          companyId: me.companyId,
++        },
++        select: { id: true },
++      });
++      const foundIds = new Set(found.map((f) => f.id));
++      const missing = body.templateIds.filter((id) => !foundIds.has(id));
++      if (missing.length) {
++        throw new BadRequestException(
++          `Templates inválidos: ${missing.join(', ')}`,
++        );
++      }
++    }
++
+     const c = await this.cases.createCase({
+       userId,
+       companyId: me.companyId,
+       customerId: body.customerId ?? null,
+       type: body.type,
+       requestText: body.requestText,
++      categoryId: body.categoryId ?? null,
++      templateIds: body.templateIds ?? [],
+     });
+     return { message: 'Caso criado.', data: c };
+   }
+diff --git a/src/ai-docs/controllers/categories.controller.ts b/src/ai-docs/controllers/categories.controller.ts
+index 8235f9d..4c3b9e2 100644
+--- a/src/ai-docs/controllers/categories.controller.ts
++++ b/src/ai-docs/controllers/categories.controller.ts
+@@ -8,14 +8,25 @@ import {
+   Post,
+   Query,
+   BadRequestException,
++  UseInterceptors,
++  UploadedFile,
+ } from '@nestjs/common';
++import { FileInterceptor } from '@nestjs/platform-express';
++import { diskStorage } from 'multer';
++import * as os from 'os';
++import * as path from 'path';
++import * as fs from 'fs';
+ import { PrismaService } from '../../_common/prisma/prisma.service';
+ import { Authz } from '../../auth/decorators/rule.decorator';
+ import { User } from '../../_common/decorators/user.decorator';
++import { CategoryStylesService } from '../services/category-styles.service';
+ 
+ @Controller('ai/categories')
+ export class CategoriesController {
+-  constructor(private prisma: PrismaService) {}
++  constructor(
++    private prisma: PrismaService,
++    private styles: CategoryStylesService,
++  ) {}
+ 
+   private slugify(name: string) {
+     return name
+@@ -255,4 +266,116 @@ export class CategoriesController {
+     });
+     return { message: 'Removida (soft delete).' };
+   }
++
++  @Post(':id/style-docx')
++  @Authz('ai.categories.update')
++  @UseInterceptors(
++    FileInterceptor('file', {
++      storage: diskStorage({
++        destination: (req, file, cb) => cb(null, os.tmpdir()),
++        filename: (req, file, cb) =>
++          cb(
++            null,
++            'cat-style-' +
++              Date.now() +
++              path.extname(file.originalname || '.docx'),
++          ),
++      }),
++      limits: { fileSize: 25 * 1024 * 1024 },
++    }),
++  )
++  async uploadCategoryStyle(
++    @Param('id') categoryId: string,
++    @User('userId') userId: string,
++    @UploadedFile() file: Express.Multer.File,
++  ) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    // Verificar se a categoria existe e pertence à empresa
++    await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: categoryId, deletedAt: null, companyId: me.companyId },
++    });
++
++    if (!file) throw new BadRequestException('Envie um arquivo .docx');
++    const okMime =
++      /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/i.test(
++        file.mimetype || '',
++      );
++    const okExt = (file.originalname || '').toLowerCase().endsWith('.docx');
++    if (!okMime && !okExt) {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++      throw new BadRequestException(
++        'Formato inválido. Envie um .docx (Word OOXML).',
++      );
++    }
++    if (file.size > 25 * 1024 * 1024) {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++      throw new BadRequestException('O arquivo excede 25 MB.');
++    }
++
++    try {
++      const buffer = fs.readFileSync(file.path);
++      const saved = await this.styles.attachStyleDocxToCategory({
++        categoryId,
++        fileBuffer: buffer,
++        originalname: file.originalname,
++        mimetype: file.mimetype,
++      });
++      return { message: 'Estilo atualizado', fileId: saved.fileId };
++    } finally {
++      try {
++        fs.unlinkSync(file.path);
++      } catch {}
++    }
++  }
++
++  @Get(':id/styles')
++  @Authz('ai.categories.read')
++  async getCategoryStyles(
++    @Param('id') categoryId: string,
++    @User('userId') userId: string,
++  ) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    // Verificar se a categoria existe e pertence à empresa
++    await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: categoryId, deletedAt: null, companyId: me.companyId },
++    });
++
++    const styles = await this.styles.getCategoryStyles(categoryId);
++    return { message: 'Ok', data: styles };
++  }
++
++  @Delete(':id/styles')
++  @Authz('ai.categories.update')
++  async removeCategoryStyles(
++    @Param('id') categoryId: string,
++    @User('userId') userId: string,
++  ) {
++    const me = await this.prisma.user.findFirstOrThrow({
++      where: { id: userId, deletedAt: null },
++      select: { companyId: true },
++    });
++    if (!me.companyId) throw new BadRequestException('Usuário sem empresa.');
++
++    // Verificar se a categoria existe e pertence à empresa
++    await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: categoryId, deletedAt: null, companyId: me.companyId },
++    });
++
++    await this.styles.removeStyleFromCategory(categoryId);
++    return { message: 'Estilo removido' };
++  }
+ }
+diff --git a/src/ai-docs/controllers/drafts.controller.ts b/src/ai-docs/controllers/drafts.controller.ts
+index 26163d3..c33f473 100644
+--- a/src/ai-docs/controllers/drafts.controller.ts
++++ b/src/ai-docs/controllers/drafts.controller.ts
+@@ -151,7 +151,7 @@ export class DraftsController {
+   @HttpCode(HttpStatus.CREATED)
+   async generate(
+     @Param('caseId') caseId: string,
+-    @Body() body: { templateId?: string },
++    @Body() body: { templateId?: string; templateIds?: string[] },
+     @User('userId') userId: string,
+   ) {
+     // Multi-tenant: garante posse do case
+@@ -170,7 +170,66 @@ export class DraftsController {
+     });
+     const d = await this.gen.generateDraft(caseId, {
+       templateId: body.templateId,
++      templateIds: Array.isArray(body.templateIds)
++        ? body.templateIds
++        : undefined,
+     });
++    /**
++     * ✅ Pós-processo: injeta baseline de estilo/seções no JSON do draft
++     * Regra:
++     * - Se a PEÇA (categoria do caso) tiver DOCX de estilo, usa ela;
++     * - Senão, usa o Documento Base da empresa (company);
++     * - (Legado) se nenhum dos dois existir, mantém como está (o export já tem fallback).
++     */
++    try {
++      const cse = await this.prisma.aiCase.findFirstOrThrow({
++        where: { id: caseId },
++        select: { categoryId: true, companyId: true },
++      });
++      const cat = cse.categoryId
++        ? await this.prisma.aiCategory.findFirst({
++            where: { id: cse.categoryId },
++            select: { styleStyleJson: true, styleWdocJson: true },
++          })
++        : null;
++      const comp = await this.prisma.company.findFirst({
++        where: { id: cse.companyId },
++        select: { baseStyleStyleJson: true, baseStyleWdocJson: true },
++      });
++
++      const baselineStyles =
++        (cat?.styleStyleJson as any) ??
++        (comp?.baseStyleStyleJson as any) ??
++        null;
++      const baselineSections =
++        (cat?.styleWdocJson as any)?.sections ??
++        (comp?.baseStyleWdocJson as any)?.sections ??
++        null;
++
++      if (baselineStyles || baselineSections) {
++        const source =
++          cat?.styleStyleJson || cat?.styleWdocJson ? 'category' : 'company';
++        const currentJson = (d.json as any) || {};
++        const merged = {
++          ...currentJson,
++          __meta: {
++            ...(currentJson.__meta || {}),
++            styleBaselineSource: source,
++            styleBaseline: baselineStyles || null,
++            sectionsBaseline: baselineSections || null,
++          },
++        };
++        await this.prisma.aiDraft.update({
++          where: { id: d.id },
++          data: { json: merged },
++        });
++        // também devolve no payload atualizado
++        d.json = merged as any;
++      }
++    } catch {
++      // não bloqueia fluxo se der erro aqui
++    }
++
+     return { message: 'Draft gerado.', data: d };
+   }
+ 
+diff --git a/src/ai-docs/controllers/templates.controller.ts b/src/ai-docs/controllers/templates.controller.ts
+index f785fd9..b5830bf 100644
+--- a/src/ai-docs/controllers/templates.controller.ts
++++ b/src/ai-docs/controllers/templates.controller.ts
+@@ -314,10 +314,28 @@ export class TemplatesController {
+       fs.promises.unlink(file.path).catch(() => {});
+ 
+       return { message: 'Template criado e processado.', data: template };
+-    } catch (error) {
+-      // Limpeza em caso de erro
++    } catch (error: any) {
+       fs.promises.unlink(file.path).catch(() => {});
+-      throw error;
++
++      // Unwrap de AggregateError -> junta as mensagens das causas
++      let msg = String(error?.message || error);
++      if (error?.name === 'AggregateError' && Array.isArray(error?.errors)) {
++        const parts = error.errors
++          .map((e: any) => e?.message || String(e))
++          .filter(Boolean);
++        msg = parts.length ? parts.join(' | ') : msg;
++      }
++      const cause = (error as any)?.cause
++        ? ` | cause=${String((error as any).cause?.message || (error as any).cause)}`
++        : '';
++
++      this.logger.error(
++        `POST /ai/templates falhou: ${msg}${cause}`,
++        error?.stack,
++      );
++
++      // 400 mais amigável, em vez de 500 genérico
++      throw new BadRequestException(`Falha ao processar o template: ${msg}`);
+     }
+   }
+ 
+@@ -398,9 +416,28 @@ export class TemplatesController {
+       }
+ 
+       return { message: 'DOCX do template atualizado e reprocessado.' };
+-    } catch (error) {
++    } catch (error: any) {
+       fs.promises.unlink(file.path).catch(() => {});
+-      throw error;
++
++      // Unwrap de AggregateError -> junta as mensagens das causas
++      let msg = String(error?.message || error);
++      if (error?.name === 'AggregateError' && Array.isArray(error?.errors)) {
++        const parts = error.errors
++          .map((e: any) => e?.message || String(e))
++          .filter(Boolean);
++        msg = parts.length ? parts.join(' | ') : msg;
++      }
++      const cause = (error as any)?.cause
++        ? ` | cause=${String((error as any).cause?.message || (error as any).cause)}`
++        : '';
++
++      this.logger.error(
++        `PATCH /ai/templates/:id/docx falhou: ${msg}${cause}`,
++        error?.stack,
++      );
++
++      // 400 mais amigável, em vez de 500 genérico
++      throw new BadRequestException(`Falha ao processar o DOCX: ${msg}`);
+     }
+   }
+ 
+@@ -638,52 +675,76 @@ export class TemplatesController {
+    * Extrai um catálogo simplificado de estilos do .docx:
+    * Lê styles.xml e cria um dicionário { styleId: { paragraph, run } }
+    * suficiente para orientar a geração e o export.
++   * Versão à prova de falhas: se der erro, retorna null e continua sem estilos.
+    */
+   private async extractStylesFromDocx(buffer: Buffer) {
+-    const zip = await JSZip.loadAsync(buffer);
+-    const stylesXml = await zip.file('word/styles.xml')?.async('string');
+-    if (!stylesXml) return null;
+-    const parser = new XMLParser({
+-      ignoreAttributes: false,
+-      attributeNamePrefix: '',
+-      allowBooleanAttributes: true,
+-    });
+-    const j = parser.parse(stylesXml);
+-    const styles: Record<string, any> = {};
+-    const S = j?.['w:styles']?.['w:style'] || [];
+-    const arr = Array.isArray(S) ? S : [S];
+-    for (const node of arr) {
+-      const id = node?.['w:styleId'];
+-      if (!id) continue;
+-      const pPr = node?.['w:pPr'] || {};
+-      const rPr = node?.['w:rPr'] || {};
+-      const paragraph = {
+-        alignment: pPr?.['w:jc']?.['w:val'] || undefined,
+-        spacing: {
+-          before: +(pPr?.['w:spacing']?.['w:before'] || 0),
+-          after: +(pPr?.['w:spacing']?.['w:after'] || 0),
+-          line: +(pPr?.['w:spacing']?.['w:line'] || 0),
+-        },
+-        indent: {
+-          left: +(pPr?.['w:ind']?.['w:left'] || 0),
+-          right: +(pPr?.['w:ind']?.['w:right'] || 0),
+-          firstLine: +(pPr?.['w:ind']?.['w:firstLine'] || 0),
+-        },
+-      };
+-      const run = {
+-        font:
+-          rPr?.['w:rFonts']?.['w:ascii'] ||
+-          rPr?.['w:rFonts']?.['w:hAnsi'] ||
+-          undefined,
+-        size: rPr?.['w:sz']?.['w:val'] ? +rPr['w:sz']['w:val'] / 2 : undefined, // Word usa half-points
+-        bold: !!rPr?.['w:b'],
+-        italic: !!rPr?.['w:i'],
+-        underline: !!rPr?.['w:u'],
+-        caps: !!rPr?.['w:caps'],
+-        smallCaps: !!rPr?.['w:smallCaps'],
+-      };
+-      styles[id] = { paragraph, run };
++    try {
++      const zip = await JSZip.loadAsync(buffer);
++
++      // sanity check: DOCX precisa ter document.xml
++      if (!zip.file('word/document.xml')) {
++        throw new BadRequestException(
++          'DOCX inválido: word/document.xml ausente.',
++        );
++      }
++
++      const stylesXmlEntry = zip.file('word/styles.xml');
++      if (!stylesXmlEntry) return null; // sem estilos? segue o jogo.
++
++      const stylesXml = await stylesXmlEntry.async('string');
++      const parser = new XMLParser({
++        ignoreAttributes: false,
++        attributeNamePrefix: '',
++        allowBooleanAttributes: true,
++      });
++
++      const j = parser.parse(stylesXml);
++      const styles: Record<string, any> = {};
++      const S = j?.['w:styles']?.['w:style'] || [];
++      const arr = Array.isArray(S) ? S : [S];
++
++      for (const node of arr) {
++        const id = node?.['w:styleId'];
++        if (!id) continue;
++        const pPr = node?.['w:pPr'] || {};
++        const rPr = node?.['w:rPr'] || {};
++        styles[id] = {
++          paragraph: {
++            alignment: pPr?.['w:jc']?.['w:val'] || undefined,
++            spacing: {
++              before: +(pPr?.['w:spacing']?.['w:before'] || 0),
++              after: +(pPr?.['w:spacing']?.['w:after'] || 0),
++              line: +(pPr?.['w:spacing']?.['w:line'] || 0),
++            },
++            indent: {
++              left: +(pPr?.['w:ind']?.['w:left'] || 0),
++              right: +(pPr?.['w:ind']?.['w:right'] || 0),
++              firstLine: +(pPr?.['w:ind']?.['w:firstLine'] || 0),
++            },
++          },
++          run: {
++            font:
++              rPr?.['w:rFonts']?.['w:ascii'] ||
++              rPr?.['w:rFonts']?.['w:hAnsi'] ||
++              undefined,
++            size: rPr?.['w:sz']?.['w:val']
++              ? +rPr['w:sz']['w:val'] / 2
++              : undefined,
++            bold: !!rPr?.['w:b'],
++            italic: !!rPr?.['w:i'],
++            underline: !!rPr?.['w:u'],
++            caps: !!rPr?.['w:caps'],
++            smallCaps: !!rPr?.['w:smallCaps'],
++          },
++        };
++      }
++      return styles;
++    } catch (e) {
++      // NÃO quebre a criação do template por causa de styles.xml ruim.
++      this.logger.warn(
++        `Falha ao extrair estilos do DOCX: ${String((e as any)?.message || e)}`,
++      );
++      return null;
+     }
+-    return styles;
+   }
+ }
+diff --git a/src/ai-docs/services/base-styles.service.ts b/src/ai-docs/services/base-styles.service.ts
+new file mode 100644
+index 0000000..b3bffca
+--- /dev/null
++++ b/src/ai-docs/services/base-styles.service.ts
+@@ -0,0 +1,116 @@
++import { Injectable, Logger } from '@nestjs/common';
++import { PrismaService } from '../../_common/prisma/prisma.service';
++import { StorageClientService } from '../../_common/storage-client/storage-client.service';
++import { docxToWDoc } from '../parsers/docx-to-wdoc';
++import { wdocToExtractJson } from '../parsers/wdoc-to-extract';
++
++@Injectable()
++export class BaseStylesService {
++  private readonly logger = new Logger(BaseStylesService.name);
++  constructor(
++    private prisma: PrismaService,
++    private storage: StorageClientService,
++  ) {}
++
++  /**
++   * Salva o DOCX base (empresa) e extrai estilos/sections mínimos
++   * Requer colunas na tabela "company":
++   *  - baseStyleFileId (string|null)
++   *  - baseStyleStyleJson (jsonb|null)
++   *  - baseStyleWdocJson (jsonb|null)
++   *  - baseStyleUpdatedAt (timestamp|null)
++   */
++  async attachBaseStyleDocxToCompany(params: {
++    companyId: string;
++    fileBuffer: Buffer;
++    originalname: string;
++    mimetype?: string;
++  }) {
++    // upload bruto
++    const saved = await this.storage.upload(
++      {
++        buffer: params.fileBuffer,
++        originalname: params.originalname,
++        mimetype:
++          params.mimetype ??
++          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
++      } as any,
++      'company-base-styles',
++      false,
++    );
++
++    // wdoc mínimo
++    const wdoc = await docxToWDoc(params.fileBuffer);
++    const extract = wdocToExtractJson(wdoc);
++    const minimalWdoc = {
++      sections: Array.isArray((wdoc as any)?.sections)
++        ? (wdoc as any).sections
++        : undefined,
++    };
++
++    await this.prisma.company.update({
++      where: { id: params.companyId },
++      data: {
++        baseStyleFileId: saved.id,
++        baseStyleStyleJson: extract?.styles ?? {},
++        baseStyleWdocJson: minimalWdoc,
++        baseStyleUpdatedAt: new Date(),
++      },
++    });
++
++    return { fileId: saved.id };
++  }
++
++  async removeCompanyBaseStyle(companyId: string) {
++    const c = await this.prisma.company.findFirstOrThrow({
++      where: { id: companyId },
++      select: { baseStyleFileId: true },
++    });
++    if (c.baseStyleFileId) {
++      try {
++        await this.storage.delete(c.baseStyleFileId);
++      } catch (e) {
++        this.logger.warn(
++          `Falha ao remover baseStyleFileId=${c.baseStyleFileId}: ${String((e as any)?.message || e)}`,
++        );
++      }
++    }
++    await this.prisma.company.update({
++      where: { id: companyId },
++      data: {
++        baseStyleFileId: null,
++        baseStyleStyleJson: null,
++        baseStyleWdocJson: null,
++        baseStyleUpdatedAt: null,
++      },
++    });
++    return { success: true };
++  }
++
++  async getCompanyBaseStyles(companyId: string) {
++    const c = await this.prisma.company.findFirstOrThrow({
++      where: { id: companyId },
++      select: {
++        id: true,
++        name: true,
++        baseStyleFileId: true,
++        baseStyleStyleJson: true,
++        baseStyleWdocJson: true,
++        baseStyleUpdatedAt: true,
++      },
++    });
++    return {
++      companyId: c.id,
++      companyName: c.name,
++      fileId: c.baseStyleFileId,
++      styleStyleJson: c.baseStyleStyleJson,
++      styleWdocJson: c.baseStyleWdocJson,
++      updatedAt: c.baseStyleUpdatedAt,
++      hasStyle: !!(
++        c.baseStyleFileId ||
++        c.baseStyleStyleJson ||
++        c.baseStyleWdocJson
++      ),
++    };
++  }
++}
+diff --git a/src/ai-docs/services/cases.service.ts b/src/ai-docs/services/cases.service.ts
+index 7f0ea21..1fc104e 100644
+--- a/src/ai-docs/services/cases.service.ts
++++ b/src/ai-docs/services/cases.service.ts
+@@ -21,6 +21,8 @@ export class CasesService {
+     customerId?: string | null;
+     type: string;
+     requestText: string;
++    categoryId?: string | null; // ✅ novo
++    templateIds?: string[]; // ✅ novo
+   }) {
+     const traceId = `case:${input.userId}:${Date.now().toString(36)}`;
+     const R = makeReasoning('CasesService.create', traceId);
+@@ -34,9 +36,21 @@ export class CasesService {
+         type: input.type,
+         requestText: input.requestText,
+         status: 'DRAFT',
++        categoryId: input.categoryId ?? null,
+       },
+     });
+ 
++    // 🔹 registar seleção de templates (N:N)
++    if (Array.isArray(input.templateIds) && input.templateIds.length) {
++      await this.prisma.$transaction(
++        input.templateIds.map((tplId) =>
++          this.prisma.aiCaseTemplate.create({
++            data: { caseId: created.id, templateId: tplId },
++          }),
++        ),
++      );
++    }
++
+     R.end('ok', { caseId: created.id });
+     return created;
+   }
+diff --git a/src/ai-docs/services/category-styles.service.ts b/src/ai-docs/services/category-styles.service.ts
+new file mode 100644
+index 0000000..75f1c2f
+--- /dev/null
++++ b/src/ai-docs/services/category-styles.service.ts
+@@ -0,0 +1,129 @@
++import { Injectable, Logger } from '@nestjs/common';
++import { PrismaService } from '../../_common/prisma/prisma.service';
++import { StorageClientService } from '../../_common/storage-client/storage-client.service';
++import { docxToWDoc } from '../parsers/docx-to-wdoc';
++import { wdocToExtractJson } from '../parsers/wdoc-to-extract';
++
++@Injectable()
++export class CategoryStylesService {
++  private readonly logger = new Logger(CategoryStylesService.name);
++
++  constructor(
++    private prisma: PrismaService,
++    private storage: StorageClientService,
++  ) {}
++
++  /**
++   * Recebe um DOCX, extrai estilos/sections e salva na categoria.
++   * NÃO faz embeddings/chunk (não é conhecimento).
++   */
++  async attachStyleDocxToCategory(params: {
++    categoryId: string;
++    fileBuffer: Buffer;
++    originalname: string;
++    mimetype?: string;
++  }) {
++    const cat = await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: params.categoryId, deletedAt: null },
++      select: { id: true, companyId: true },
++    });
++
++    // 1) salvar arquivo bruto
++    const saved = await this.storage.upload(
++      {
++        buffer: params.fileBuffer,
++        originalname: params.originalname,
++        mimetype:
++          params.mimetype ??
++          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
++      } as any,
++      'category-styles',
++      false,
++    );
++
++    // 2) extrair WDoc e derivar Extract (para capturar sections/numeração)
++    const wdoc = await docxToWDoc(params.fileBuffer);
++    const extract = wdocToExtractJson(wdoc);
++    // ✅ salvar apenas SEÇÕES para não vazar conteúdo do DOCX
++    const minimalWdoc = {
++      sections: Array.isArray((wdoc as any)?.sections)
++        ? (wdoc as any).sections
++        : undefined,
++    };
++
++    // 3) persistir só o que interessa para estilo/sections
++    await this.prisma.aiCategory.update({
++      where: { id: cat.id },
++      data: {
++        styleFileId: saved.id,
++        styleStyleJson: extract?.styles ?? {},
++        styleWdocJson: minimalWdoc,
++        styleUpdatedAt: new Date(),
++      },
++    });
++
++    return { fileId: saved.id };
++  }
++
++  /**
++   * Remove o estilo DOCX da categoria
++   */
++  async removeStyleFromCategory(categoryId: string) {
++    const cat = await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: categoryId, deletedAt: null },
++      select: { id: true, styleFileId: true },
++    });
++
++    if (cat.styleFileId) {
++      // Remove o arquivo do storage (se necessário)
++      try {
++        await this.storage.delete(cat.styleFileId);
++      } catch (error) {
++        this.logger.warn(
++          `Failed to delete style file ${cat.styleFileId}:`,
++          error,
++        );
++      }
++    }
++
++    // Limpa os campos de estilo na categoria
++    await this.prisma.aiCategory.update({
++      where: { id: cat.id },
++      data: {
++        styleFileId: null,
++        styleStyleJson: null,
++        styleWdocJson: null,
++        styleUpdatedAt: null,
++      },
++    });
++
++    return { success: true };
++  }
++
++  /**
++   * Obtém os estilos da categoria
++   */
++  async getCategoryStyles(categoryId: string) {
++    const cat = await this.prisma.aiCategory.findFirstOrThrow({
++      where: { id: categoryId, deletedAt: null },
++      select: {
++        id: true,
++        name: true,
++        styleFileId: true,
++        styleStyleJson: true,
++        styleWdocJson: true,
++        styleUpdatedAt: true,
++      },
++    });
++
++    return {
++      id: cat.id,
++      name: cat.name,
++      styleFileId: cat.styleFileId,
++      styleStyleJson: cat.styleStyleJson,
++      styleWdocJson: cat.styleWdocJson,
++      styleUpdatedAt: cat.styleUpdatedAt,
++      hasStyle: !!(cat.styleFileId || cat.styleStyleJson || cat.styleWdocJson),
++    };
++  }
++}
+diff --git a/src/ai-docs/services/chat.service.ts b/src/ai-docs/services/chat.service.ts
+index 03c37f3..7cb80f3 100644
+--- a/src/ai-docs/services/chat.service.ts
++++ b/src/ai-docs/services/chat.service.ts
+@@ -307,8 +307,29 @@ export class ChatService {
+       [text],
+       `chat:${caseId}:${Date.now().toString(36)}`,
+     );
++    let tplIds: string[] | undefined = Array.isArray((draft as any).templateIds)
++      ? ((draft as any).templateIds as string[])
++      : draft.templateId
++        ? [draft.templateId]
++        : undefined;
++
++    // fallback: pegar do JSON do draft (meta)
++    if (!tplIds) {
++      const metaIds = (draft as any)?.json?.__meta?.templateIds;
++      if (Array.isArray(metaIds) && metaIds.length) tplIds = metaIds;
++    }
++
++    // fallback final: vínculos do caso (ai_case_template)
++    if (!tplIds) {
++      const links = await this.prisma.aiCaseTemplate.findMany({
++        where: { caseId },
++        select: { templateId: true },
++      });
++      if (links.length) tplIds = links.map((l) => l.templateId);
++    }
+     const ctx = await this.rag.search(caseId, qv, text, {
+-      templateId: draft.templateId || undefined,
++      templateIds: tplIds,
++      templateId: tplIds?.length === 1 ? tplIds[0] : undefined, // compat
+     });
+     const contextText = [
+       ...ctx.templates
+diff --git a/src/ai-docs/services/export.service.ts b/src/ai-docs/services/export.service.ts
+index 0841aa9..8dd6cb0 100644
+--- a/src/ai-docs/services/export.service.ts
++++ b/src/ai-docs/services/export.service.ts
+@@ -302,7 +302,21 @@ export class ExportService {
+ 
+     const d = await this.prisma.aiDraft.findFirstOrThrow({
+       where: { id: draftId },
++      include: {
++        case: {
++          select: { categoryId: true, companyId: true },
++        },
++      },
+     });
++
++    // ⚠️ Buscar estilo/sections da Categoria primeiro
++    const cat = d.case?.categoryId
++      ? await this.prisma.aiCategory.findFirst({
++          where: { id: d.case.categoryId },
++          select: { styleStyleJson: true, styleWdocJson: true },
++        })
++      : null;
++
+     const tpl = d.templateId
+       ? await this.prisma.aiTemplate.findFirst({
+           where: { id: d.templateId },
+@@ -310,13 +324,46 @@ export class ExportService {
+         })
+       : null;
+ 
++    // ⚠️ Base da empresa (Documento Base)
++    const comp = d.case?.companyId
++      ? await this.prisma.company.findFirst({
++          where: { id: d.case.companyId },
++          select: { baseStyleStyleJson: true, baseStyleWdocJson: true },
++        })
++      : null;
++
+     const data = d.json as any;
+     const wdocSource = Array.isArray(data?.content)
+       ? data
+       : extractToWdoc(data); // << converte "extract" -> WDoc
+ 
+-    // Sobrescreve estilos padrão com os do template
+-    if (tpl?.styleJson) {
++    // ✅ Sections: Categoria → Empresa(Base) → (sem fallback adicional)
++    if (
++      cat?.styleWdocJson &&
++      typeof cat.styleWdocJson === 'object' &&
++      cat.styleWdocJson !== null &&
++      'sections' in cat.styleWdocJson &&
++      Array.isArray((cat.styleWdocJson as any).sections) &&
++      (cat.styleWdocJson as any).sections.length
++    ) {
++      (wdocSource as any).sections = (cat.styleWdocJson as any).sections;
++    } else if (
++      comp?.baseStyleWdocJson &&
++      typeof comp.baseStyleWdocJson === 'object' &&
++      comp.baseStyleWdocJson !== null &&
++      'sections' in comp.baseStyleWdocJson &&
++      Array.isArray((comp.baseStyleWdocJson as any).sections) &&
++      (comp.baseStyleWdocJson as any).sections.length
++    ) {
++      (wdocSource as any).sections = (comp.baseStyleWdocJson as any).sections;
++    }
++
++    // ✅ Estilos (run/paragraph): Categoria → Empresa(Base) → Template (legado)
++    if (cat?.styleStyleJson) {
++      wdocSource.styles = cat.styleStyleJson;
++    } else if (comp?.baseStyleStyleJson) {
++      wdocSource.styles = comp.baseStyleStyleJson;
++    } else if (tpl?.styleJson) {
+       wdocSource.styles = tpl.styleJson;
+     }
+ 
+diff --git a/src/ai-docs/services/generation.service.ts b/src/ai-docs/services/generation.service.ts
+index 462a576..b9f40e1 100644
+--- a/src/ai-docs/services/generation.service.ts
++++ b/src/ai-docs/services/generation.service.ts
+@@ -981,7 +981,9 @@ export class GenerationService {
+   async generateDraft(
+     caseId: string,
+     opts: {
+-      templateId?: string;
++      templateId?: string; // legado
++      templateIds?: string[]; // ✅ novo
++      categoryId?: string; // ✅ garantir a categoria para estilo
+       /** Overrides opcionais para o header fixo e o rodapé fixo */
+       header?: FixedHeaderOpts;
+       footer?: FixedFooterOpts;
+@@ -994,7 +996,13 @@ export class GenerationService {
+ 
+     const c = await this.prisma.aiCase.findFirstOrThrow({
+       where: { id: caseId, deletedAt: null },
+-      select: { id: true, companyId: true, type: true, requestText: true },
++      select: {
++        id: true,
++        companyId: true,
++        type: true,
++        requestText: true,
++        categoryId: true,
++      },
+     });
+     const docKind = guessOtjKind(c.type);
+ 
+@@ -1023,10 +1031,35 @@ export class GenerationService {
+       });
+     }
+ 
++    // 🔹 Estilo/sections da Categoria (preferencial)
++    const category = await this.prisma.aiCategory.findFirst({
++      where: {
++        id: opts.categoryId ?? c.categoryId ?? undefined,
++        deletedAt: null,
++      },
++      select: { id: true, styleStyleJson: true, styleWdocJson: true },
++    });
++
+     R.step('Buscando modelos e referências úteis...', 'rag');
+     const [qv] = await this.emb.embedBatch([c.requestText], traceId);
++
++    // ✅ Resolver lista de templates:
++    //    1) usa opts.templateIds se vier
++    //    2) senão, busca N:N (AiCaseTemplate) do caso
++    let resolvedTemplateIds: string[] = Array.isArray(opts.templateIds)
++      ? [...new Set(opts.templateIds)]
++      : [];
++    if (!resolvedTemplateIds.length) {
++      const links = await this.prisma.aiCaseTemplate.findMany({
++        where: { caseId },
++        select: { templateId: true },
++      });
++      resolvedTemplateIds = links.map((l) => l.templateId);
++    }
++
+     const ctx = await this.rag.search(caseId, qv, c.requestText, {
+-      templateId: opts.templateId,
++      templateId: opts.templateId, // legado
++      templateIds: resolvedTemplateIds.length ? resolvedTemplateIds : undefined,
+     });
+     const instrPieces = (ctx.templates || [])
+       .filter(
+@@ -1066,7 +1099,16 @@ export class GenerationService {
+       model,
+     });
+ 
+-    if (tpl?.wdocJson) {
++    // ⚖️ Nova regra de decisão:
++    // - Se houver VÁRIOS templates selecionados (resolvedTemplateIds.length > 1),
++    //   usamos caminho "free-extract" + estilo da CATEGORIA (formatação).
++    // - Se houver apenas 1 template (legado) e VOCÊ quiser manter compat,
++    //   pode usar o mapeamento para o wdoc do template.
++    const multipleTemplates = resolvedTemplateIds.length > 1;
++    const styleFromCategory = category?.styleStyleJson ?? null;
++    const wdocFromCategory = category?.styleWdocJson ?? null;
++
++    if (!multipleTemplates && tpl?.wdocJson) {
+       R.step(
+         'Organizando no formato do modelo escolhido...',
+         'map-to-template',
+@@ -1144,12 +1186,18 @@ export class GenerationService {
+         }
+ 
+         // 4) Segue o fluxo normal: normalize + header/footer fixos
++        // 🔹 Sections: se Categoria tiver sections, priorize; senão fallback
+         const fallbackSections =
+-          tpl?.wdocJson &&
++          (wdocFromCategory &&
++          Array.isArray((wdocFromCategory as any).sections) &&
++          (wdocFromCategory as any).sections?.length
++            ? (wdocFromCategory as any).sections
++            : undefined) ??
++          (tpl?.wdocJson &&
+           Array.isArray((tpl as any).wdocJson.sections) &&
+-          (tpl as any).wdocJson.sections.length
++          (tpl as any).wdocJson.sections?.length
+             ? (tpl as any).wdocJson.sections
+-            : OTJ_A4_SECTIONS;
++            : OTJ_A4_SECTIONS);
+ 
+         normalized = normalizeExtractForFront(sanitized, fallbackSections);
+         normalized = prependFixedHeader(normalized, {
+@@ -1178,7 +1226,8 @@ export class GenerationService {
+ 
+         let freeExtract = await this.mapProseToFreeExtract({
+           prose,
+-          styleJson: null,
++          // 🔹 injeta estilo da Categoria (se houver) para guiar runs/paragraphs
++          styleJson: styleFromCategory ?? null,
+           model,
+         });
+         freeExtract = this.rehydrateContent(freeExtract);
+@@ -1219,7 +1268,12 @@ export class GenerationService {
+         }
+ 
+         // 4) Segue o fluxo normal
+-        const fallbackSections = OTJ_A4_SECTIONS;
++        const fallbackSections =
++          wdocFromCategory &&
++          Array.isArray((wdocFromCategory as any).sections) &&
++          (wdocFromCategory as any).sections?.length
++            ? (wdocFromCategory as any).sections
++            : OTJ_A4_SECTIONS;
+         normalized = normalizeExtractForFront(freeExtract, fallbackSections);
+         normalized = prependFixedHeader(normalized, {
+           ...(opts.header || {}),
+@@ -1263,7 +1317,8 @@ export class GenerationService {
+       // 2B) Sem TEMPLATE: peça livre -> extract JSON
+       let freeExtract = await this.mapProseToFreeExtract({
+         prose,
+-        styleJson: null,
++        // 🔹 injeta estilo da Categoria (se houver) para guiar runs/paragraphs
++        styleJson: styleFromCategory ?? null,
+         model,
+       });
+       // ✅ garante .content
+@@ -1308,7 +1363,12 @@ export class GenerationService {
+       }
+ 
+       // 👉 padroniza pro front + injeta sections (do template ou A4 default)
+-      const fallbackSections = OTJ_A4_SECTIONS; // usa margens OTJ por padrão
++      const fallbackSections =
++        wdocFromCategory &&
++        Array.isArray((wdocFromCategory as any).sections) &&
++        (wdocFromCategory as any).sections?.length
++          ? (wdocFromCategory as any).sections
++          : OTJ_A4_SECTIONS; // usa margens OTJ por padrão
+       let normalized = normalizeExtractForFront(freeExtract, fallbackSections);
+ 
+       // 🧩 injeta fixos com merge de overrides do caller
+@@ -1357,13 +1417,25 @@ export class GenerationService {
+ 
+     R.step('Salvando o rascunho...', 'persist');
+     // persiste o NORMALIZADO (idêntico ao que o front já aceita)
++    // Adiciona templateIds no meta do JSON para compatibilidade
++    const jsonWithMeta = {
++      ...extractJson,
++      __meta: {
++        ...(extractJson as any).__meta,
++        templateIds: resolvedTemplateIds.length
++          ? resolvedTemplateIds
++          : undefined,
++      },
++    };
++
+     const draft = await this.prisma.aiDraft.create({
+       data: {
+         caseId,
+-        templateId: opts.templateId ?? null,
++        templateId: opts.templateId ?? null, // legado
++        templateIds: resolvedTemplateIds.length ? resolvedTemplateIds : null, // ✅ snapshot
+         version: 1,
+         status: 'draft',
+-        json: extractJson,
++        json: jsonWithMeta,
+       },
+     });
+ 
+diff --git a/src/ai-docs/services/rag.service.ts b/src/ai-docs/services/rag.service.ts
+index cb6eac7..7890e04 100644
+--- a/src/ai-docs/services/rag.service.ts
++++ b/src/ai-docs/services/rag.service.ts
+@@ -1,5 +1,6 @@
+ import { Injectable, Logger } from '@nestjs/common';
+ import { PrismaService } from '../../_common/prisma/prisma.service';
++import { Prisma } from '@prisma/client';
+ 
+ @Injectable()
+ export class RagService {
+@@ -16,7 +17,8 @@ export class RagService {
+     queryEmbedding: number[],
+     rawQuery: string,
+     opts?: {
+-      templateId?: string;
++      templateId?: string; // legado
++      templateIds?: string[]; // ✅ novo
+       topKTemplate?: number;
+       topKCase?: number;
+       alpha?: number;
+@@ -38,9 +40,26 @@ export class RagService {
+     });
+ 
+     const tt0 = process.hrtime.bigint();
+-    // Templates: SOMENTE o template escolhido (se houver), respeitando tenant
++    // Templates: múltiplos templates ou template único (legado)
+     let tmpl: any[];
+-    if (opts?.templateId) {
++    if (opts?.templateIds?.length) {
++      tmpl = await this.prisma.$queryRaw<any[]>`
++        SELECT c.id, c.text, c.metadata, t.title,
++               1/(1 + (c.embedding <-> ${JSON.stringify(queryEmbedding)}::vector)) AS sim_vec,
++               COALESCE(ts_rank_cd(c.text_tsv, websearch_to_tsquery('portuguese', ${rawQuery}), 32), 0) AS rank_fts,
++               ( (1/(1 + (c.embedding <-> ${JSON.stringify(queryEmbedding)}::vector))) * ${alpha}
++                 + COALESCE(ts_rank_cd(c.text_tsv, websearch_to_tsquery('portuguese', ${rawQuery}), 32), 0) * ${beta}
++                 + CASE WHEN (c.metadata->>'kind')='instruction' THEN ${instrBoost} ELSE 0 END
++               ) AS score
++        FROM "ai_template_chunk" c
++        JOIN "ai_template" t ON t.id = c.template_id
++        WHERE t.deleted_at IS NULL
++          AND t.id IN (${Prisma.join(opts.templateIds)})
++          AND t.company_id = ${theCase.companyId}
++        ORDER BY score DESC
++        LIMIT ${topT}
++      `;
++    } else if (opts?.templateId) {
+       tmpl = await this.prisma.$queryRaw<any[]>`
+         SELECT c.id, c.text, c.metadata, t.title,
+                1/(1 + (c.embedding <-> ${JSON.stringify(queryEmbedding)}::vector)) AS sim_vec,
+diff --git a/src/customers/customers.controller.ts b/src/customers/customers.controller.ts
+index ef68c5a..7723e94 100644
+--- a/src/customers/customers.controller.ts
++++ b/src/customers/customers.controller.ts
+@@ -19,7 +19,6 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
+ import { CreateAddressDto } from './dto/address.dto';
+ import { UpdateAddressDto } from './dto/update-address.dto';
+ import { LinkPersonDto } from './dto/link-person.dto';
+-import { CreateBranchDto } from './dto/create-branch.dto';
+ import { UpdateCompanyDto } from './dto/update-company.dto';
+ import { ListCustomersDto } from './dto/list-customers.dto';
+ 

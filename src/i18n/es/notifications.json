@@ -1,0 +1,15 @@
+{
+  "created": "Notificación creada exitosamente",
+  "created_many": "{count} notificaciones creadas exitosamente",
+  "updated": "Notificación actualizada exitosamente",
+  "deleted": "Notificación eliminada exitosamente",
+  "listed": "Notificaciones listadas exitosamente",
+  "found": "Notificación encontrada exitosamente",
+  "not_found": "Notificación {id} no encontrada",
+  "empty": "No se encontraron notificaciones",
+  "marked_as_read": "Notificación marcada como leída",
+  "marked_as_unread": "Notificación marcada como no leída",
+  "all_marked_as_read": "{count} notificaciones marcadas como leídas",
+  "userIds_required": "Se requiere al menos un ID de usuario"
+}
+

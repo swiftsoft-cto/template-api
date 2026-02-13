@@ -1,0 +1,10 @@
+{
+  "not_found": "Not found",
+  "already_exists": "{field} already exists",
+  "field_already_exists": "{field} already exists",
+  "person_already_linked": "This person is already linked to the company",
+  "database_error": "Database error",
+  "validation_failed": "Validation failed",
+  "internal_error": "Internal server error",
+  "file_too_large": "File too large. Maximum allowed size is {limit}"
+} 

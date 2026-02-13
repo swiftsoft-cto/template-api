@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "watchAssets": true,
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "i18n/**/*",
+        "outDir": "dist/src"
+      },
+      {
+        "include": "auth/views/**/*",
+        "outDir": "dist/src"
+      },
+      {
+        "include": "package.json",
+        "outDir": "dist"
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "created": "Departamento criado com sucesso",
+  "listed": "Departamentos listados com sucesso",
+  "empty": "Nenhum departamento encontrado",
+  "found": "Departamento encontrado",
+  "updated": "Departamento atualizado com sucesso",
+  "deleted": "Departamento removido com sucesso",
+  "different_company": "Departamento e função devem pertencer à mesma empresa",
+  "role_linked": "Função vinculada ao departamento com sucesso",
+  "role_unlinked": "Função desvinculada do departamento com sucesso",
+  "roles_listed": "Funções do departamento listadas com sucesso",
+  "name_already_exists": "Já existe um departamento com este nome nesta empresa"
+}

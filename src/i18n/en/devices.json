@@ -1,0 +1,43 @@
+{
+  "whitelist": {
+    "listed": "Trusted devices listed successfully",
+    "history_listed": "Trusted devices history listed successfully",
+    "removed": "Device removed from trusted list successfully",
+    "restored": "Device restored to trusted list successfully",
+    "empty": "No trusted devices found",
+    "history_empty": "No trusted devices history found"
+  },
+  "blacklist": {
+    "listed": "Blocked devices listed successfully",
+    "history_listed": "Blocked devices history listed successfully",
+    "removed": "Device removed from blocked list successfully",
+    "restored": "Device restored to blocked list successfully",
+    "empty": "No blocked devices found",
+    "history_empty": "No blocked devices history found"
+  },
+  "reject": {
+    "success": "Device blocked successfully",
+    "invalid_token": "Invalid or already used token",
+    "error": "Error blocking device"
+  },
+  "report": {
+    "success": "IP blocked after suspicious login attempt",
+    "invalid_token": "Invalid or already used token",
+    "error": "Error reporting suspicious login"
+  },
+  "approve": {
+    "success": "Device approved successfully",
+    "invalid_token": "Invalid or already used token",
+    "error": "Error approving device"
+  },
+  "verify": {
+    "success": "Email verified successfully",
+    "invalid_token": "Invalid or already used token",
+    "error": "Error verifying email"
+  },
+  "unlock": {
+    "success": "Account unlocked successfully",
+    "invalid_token": "Invalid or already used token",
+    "error": "Error unlocking account"
+  }
+}

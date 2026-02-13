@@ -1,0 +1,20 @@
+{
+  "created": "Função criada com sucesso",
+  "listed": "Funções listadas com sucesso",
+  "empty": "Nenhuma função encontrada",
+  "found": "Função encontrada",
+  "updated": "Função atualizada com sucesso",
+  "deleted": "Função removida com sucesso",
+  "users_listed": "Usuários da função listados com sucesso",
+  "user_linked": "Usuário vinculado à função com sucesso",
+  "user_unlinked": "Usuário desvinculado da função com sucesso",
+  "user_roles_listed": "Funções do usuário listadas com sucesso",
+  "name_already_exists": "Já existe uma função com este nome nesta empresa",
+  "user_not_in_company": "Usuário não pertence à mesma empresa da função",
+  "rules_listed": "Regras listadas com sucesso",
+  "rules_empty": "Nenhuma regra encontrada",
+  "departments_listed": "Departamentos listados com sucesso",
+  "department_linked": "Departamento vinculado ao role com sucesso",
+  "department_unlinked": "Departamento desvinculado do role com sucesso",
+  "transcription_rules_activated": "Regras de transcrição ativadas com sucesso"
+}

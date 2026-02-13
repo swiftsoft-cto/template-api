@@ -1,0 +1,19 @@
+{
+  "created": "Rol creado exitosamente",
+  "listed": "Roles listados exitosamente",
+  "empty": "No se encontraron roles",
+  "found": "Rol encontrado",
+  "updated": "Rol actualizado exitosamente",
+  "deleted": "Rol eliminado exitosamente",
+  "users_listed": "Usuarios del rol listados exitosamente",
+  "user_linked": "Usuario vinculado al rol exitosamente",
+  "user_unlinked": "Usuario desvinculado del rol exitosamente",
+  "user_roles_listed": "Roles del usuario listados exitosamente",
+  "name_already_exists": "Ya existe un rol con este nombre en esta empresa",
+  "user_not_in_company": "El usuario no pertenece a la misma empresa que el rol",
+  "rules_listed": "Reglas listadas exitosamente",
+  "rules_empty": "No se encontraron reglas",
+  "departments_listed": "Departamentos listados exitosamente",
+  "department_linked": "Departamento vinculado al rol exitosamente",
+  "department_unlinked": "Departamento desvinculado del rol exitosamente"
+}

@@ -1,0 +1,13 @@
+{
+  "created": "Department created successfully",
+  "listed": "Departments listed successfully",
+  "empty": "No departments found",
+  "found": "Department found",
+  "updated": "Department updated successfully",
+  "deleted": "Department deleted successfully",
+  "different_company": "Department and role must belong to the same company",
+  "role_linked": "Role linked to department successfully",
+  "role_unlinked": "Role unlinked from department successfully",
+  "roles_listed": "Department roles listed successfully",
+  "name_already_exists": "A department with this name already exists in this company"
+}

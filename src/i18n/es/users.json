@@ -1,0 +1,12 @@
+{
+  "not_found": "Usuario con id {id} no encontrado",
+  "created": "Usuario creado exitosamente",
+  "updated": "Usuario actualizado exitosamente",
+  "deleted": "Usuario eliminado exitosamente",
+  "listed": "Usuarios listados exitosamente",
+  "found": "Usuario encontrado exitosamente",
+  "empty": "No se encontraron usuarios.",
+  "email_already_exists": "El correo ya existe",
+  "email_soft_deleted": "No se puede crear una nueva cuenta con un correo que ya fue eliminado.",
+  "already_deleted": "El usuario ya fue eliminado."
+} 

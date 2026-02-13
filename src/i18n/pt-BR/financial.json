@@ -1,0 +1,24 @@
+{
+  "category": {
+    "created": "Categoria criada com sucesso",
+    "listed": "Categorias listadas com sucesso",
+    "empty": "Nenhuma categoria encontrada",
+    "found": "Categoria encontrada",
+    "updated": "Categoria atualizada com sucesso",
+    "deleted": "Categoria removida com sucesso",
+    "not_found": "Categoria não encontrada",
+    "name_already_exists": "Já existe uma categoria com este nome"
+  },
+  "subcategory": {
+    "created": "Subcategoria criada com sucesso",
+    "listed": "Subcategorias listadas com sucesso",
+    "empty": "Nenhuma subcategoria encontrada",
+    "found": "Subcategoria encontrada",
+    "updated": "Subcategoria atualizada com sucesso",
+    "deleted": "Subcategoria removida com sucesso",
+    "not_found": "Subcategoria não encontrada",
+    "name_already_exists": "Já existe uma subcategoria com este nome"
+  }
+}
+
+

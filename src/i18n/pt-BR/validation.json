@@ -1,0 +1,40 @@
+{
+    "failed": "Falha na validação",
+    "phone": {
+        "required": "Telefone é obrigatório",
+        "invalid": "Telefone inválido. Digite apenas os números"
+    },
+    "name": {
+        "required": "Nome é obrigatório"
+    },
+    "email": {
+        "required": "Email é obrigatório",
+        "invalid_email": "Email deve ser válido"
+    },
+    "password": {
+        "required": "Senha é obrigatória",
+        "min_length": "Senha deve ter pelo menos {minimum} caracteres",
+        "uppercase": "Senha deve conter pelo menos uma letra maiúscula",
+        "lowercase": "Senha deve conter pelo menos uma letra minúscula",
+        "number": "Senha deve conter pelo menos um número",
+        "special": "Senha deve conter pelo menos um caractere especial",
+        "must_differ": "A nova senha deve ser diferente da senha atual"
+    },
+    "cpf": {
+        "required": "CPF é obrigatório",
+        "cpf_length": "CPF deve ter exatamente 11 dígitos"
+    },
+    "cnpj": {
+        "cnpj_length": "CNPJ deve ter exatamente 14 dígitos"
+    },
+    "website": {
+        "invalid_url": "URL do website deve ser válida"
+    },
+    "roleId": {
+        "required": "Cargo é obrigatório"
+    },
+    "invalid_date": "Data inválida",
+    "description": {
+        "invalid_type": "Descrição deve ser um texto. Use null, string vazia ou omita o campo se não desejar informar uma descrição"
+    }
+}

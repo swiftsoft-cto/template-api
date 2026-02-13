@@ -1,0 +1,43 @@
+{
+  "whitelist": {
+    "listed": "Dispositivos confiables listados exitosamente",
+    "history_listed": "Historial de dispositivos confiables listado exitosamente",
+    "removed": "Dispositivo removido de la lista de confiables exitosamente",
+    "restored": "Dispositivo restaurado a la lista de confiables exitosamente",
+    "empty": "No se encontraron dispositivos confiables",
+    "history_empty": "No se encontró historial de dispositivos confiables"
+  },
+  "blacklist": {
+    "listed": "Dispositivos bloqueados listados exitosamente",
+    "history_listed": "Historial de dispositivos bloqueados listado exitosamente",
+    "removed": "Dispositivo removido de la lista de bloqueados exitosamente",
+    "restored": "Dispositivo restaurado a la lista de bloqueados exitosamente",
+    "empty": "No se encontraron dispositivos bloqueados",
+    "history_empty": "No se encontró historial de dispositivos bloqueados"
+  },
+  "reject": {
+    "success": "Dispositivo bloqueado exitosamente",
+    "invalid_token": "Token inválido o ya utilizado",
+    "error": "Error al bloquear dispositivo"
+  },
+  "report": {
+    "success": "IP bloqueado después de intento de inicio de sesión sospechoso",
+    "invalid_token": "Token inválido o ya utilizado",
+    "error": "Error al reportar inicio de sesión sospechoso"
+  },
+  "approve": {
+    "success": "Dispositivo aprobado exitosamente",
+    "invalid_token": "Token inválido o ya utilizado",
+    "error": "Error al aprobar dispositivo"
+  },
+  "verify": {
+    "success": "Correo verificado exitosamente",
+    "invalid_token": "Token inválido o ya utilizado",
+    "error": "Error al verificar correo"
+  },
+  "unlock": {
+    "success": "Cuenta desbloqueada exitosamente",
+    "invalid_token": "Token inválido o ya utilizado",
+    "error": "Error al desbloquear cuenta"
+  }
+}

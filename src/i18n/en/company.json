@@ -1,0 +1,11 @@
+{
+  "found": "Company found",
+  "not_found": "Company not found",
+  "created": "Company created successfully",
+  "updated": "Company updated successfully",
+  "deleted": "Company deleted successfully",
+  "already_exists": "Company already exists",
+  "name_already_exists": "A company with this name already exists",
+  "cnpj_already_exists": "A company with this CNPJ already exists",
+  "email_already_exists": "A company with this email already exists"
+}

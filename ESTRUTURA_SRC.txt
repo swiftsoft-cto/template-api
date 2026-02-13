@@ -1,0 +1,525 @@
+================================================================================
+                    DOCUMENTAÇÃO DA ESTRUTURA DO DIRETÓRIO /SRC
+================================================================================
+
+Este arquivo documenta a finalidade de cada pasta e arquivo principal dentro do
+diretório /src da aplicação API OTJ. A API é um backend NestJS com suporte a
+internacionalização (i18n), validação robusta com Zod, autenticação JWT e 
+integração com IA.
+
+================================================================================
+                               ESTRUTURA GERAL
+================================================================================
+
+src/
+├── _ai/                    # Orquestração genérica de IA
+├── _common/                # Utilities, hooks e configurações compartilhadas
+├── _config/                # Configurações globais
+├── ai-docs/                # Módulo de documentação e processamento com IA
+├── auth/                   # Autenticação, JWT, segurança e autorização
+├── customers/              # Gerenciamento de clientes
+├── departments/            # Gerenciamento de departamentos
+├── i18n/                   # Internacionalização (idiomas)
+├── org/                    # Organização (empresas/companhias)
+├── privacy/                # Gerenciamento de campos sensíveis (privacidade)
+├── roles/                  # Gerenciamento de papéis/funções
+├── rules/                  # Gerenciamento de regras de negócio
+├── users/                  # Gerenciamento de usuários
+├── utils/                  # Utilidades gerais
+├── app.controller.ts       # Controller raiz da aplicação
+├── app.module.ts           # Módulo raiz (bootstrap do NestJS)
+├── app.service.ts          # Serviço raiz
+└── main.ts                 # Ponto de entrada da aplicação
+
+================================================================================
+                            DESCRIÇÃO DETALHADA
+================================================================================
+
+─── src/_ai ───────────────────────────────────────────────────────────────────
+    PROPÓSITO: Orquestração genérica de IA sem regras de negócio
+    
+    Contém:
+    • ai-orchestrator.service.ts - Serviço genérico para comunicação com
+      provedores de IA (padrão: OpenAI com gpt-4o-mini)
+    
+    RESPONSABILIDADES:
+    ✓ Gerenciar chamadas à API de IA
+    ✓ Implementar timeout e retry automático
+    ✓ Registrar logs e auditoria de prompts em arquivos
+    ✓ Suportar múltiplos modelos e provedores
+    ✓ Fornecer interface genérica desacoplada da lógica de negócio
+    
+    NÃO CONTÉM:
+    ✗ Lógica de negócio específica do domínio
+    ✗ Regras de processamento de dados
+    ✗ Integrações com outros módulos
+
+
+─── src/_common ────────────────────────────────────────────────────────────────
+    PROPÓSITO: Utilities, configurações e infraestrutura compartilhada
+    
+    Contém os seguintes subdiretórios:
+    
+    • decorators/
+      - user.decorator.ts: Extrai informações do usuário autenticado do request
+      
+    • filters/
+      - multer-exception.filter.ts: Trata erros de upload de arquivos
+      - typeorm-exception.filter.ts: Trata erros do banco de dados (TypeORM)
+      
+    • interceptors/
+      - content-language.interceptor.ts: Define idioma da resposta
+      - request-logger.interceptor.ts: Log de requisições HTTP
+      
+    • logging/
+      - reasoning.logger.ts: Logger especializado para raciocínios e traces
+      
+    • mail/
+      - mail.module.ts: Módulo de email
+      - mail.service.ts: Serviço para envio de emails via SMTP
+      
+    • pipes/
+      - zod-validation.pipe.ts: Pipe de validação global com Zod
+      
+    • realtime/
+      - realtime.gateway.ts: Gateway WebSocket para comunicação em tempo real
+      - realtime.module.ts: Módulo de realtime
+      - realtime.service.ts: Serviço de realtime
+      
+    • redis/
+      - redis.module.ts: Módulo Redis (Global)
+      - redis.service.ts: Serviço para cache e operações Redis
+      
+    • storage-client/
+      - storage-client.module.ts: Módulo para armazenamento em nuvem
+      - storage-client.service.ts: Serviço de integração com storage
+      
+    • typeorm/
+      - typeorm.config.ts: Configuração do banco de dados (TypeORM)
+      
+    • utils/
+      - timing.ts: Funções utilitárias para medição de tempo
+
+
+─── src/_config ────────────────────────────────────────────────────────────────
+    PROPÓSITO: Configurações globais e constantes da aplicação
+    
+    Contém:
+    • cors.config.ts - Configuração de CORS para controlar origens permitidas
+
+
+─── src/ai-docs ────────────────────────────────────────────────────────────────
+    PROPÓSITO: Módulo de documentação com processamento via IA
+    
+    Integra o orquestrador de IA (_ai/) com lógica de negócio específica.
+    Permite criar, gerenciar e processar documentação automaticamente.
+    
+    Contém os seguintes subdiretórios:
+    
+    • _extractors/
+      Serviços para extrair dados de diferentes fontes
+      
+    • _utils/
+      Utilidades específicas do módulo ai-docs
+      
+    • cases/
+      Gerenciamento de casos/instâncias de documentação
+      Lógica de processamento de casos via IA
+      
+    • pieces/
+      Partes reutilizáveis de documentação
+      Componentes que podem ser combinados para criar documentos
+      
+    • rulebooks/
+      Conjuntos de regras e diretrizes de documentação
+      Define padrões e templates para documentação
+      
+    • topic-specifics/
+      Especificidades por tópico
+      Customizações de regras por tipo de tópico
+      
+    • topics/
+      Tópicos principais de documentação
+      Estrutura de categorização de documentos
+    
+    RESPONSABILIDADES:
+    ✓ Gerenciar documentação e sua estrutura
+    ✓ Processar documentação com IA
+    ✓ Executar regras de validação
+    ✓ Gerenciar tópicos e subtópicos
+
+
+─── src/auth ───────────────────────────────────────────────────────────────────
+    PROPÓSITO: Autenticação, autorização e segurança
+    
+    Contém:
+    
+    • account-block.entity.ts: Entidade para bloqueio de contas
+    • account-block.module.ts: Módulo de bloqueio de contas
+    • account-block.service.ts: Serviço de bloqueio de contas
+    • account-block-log.entity.ts: Log de tentativas de bloqueio
+    
+    • auth.controller.ts: Endpoints de autenticação (login, logout, refresh)
+    • auth.module.ts: Módulo principal de autenticação
+    • auth.schema.ts: Schemas de validação (Zod) para auth
+    • auth.service.ts: Lógica de autenticação
+    
+    • blacklisted-device.entity.ts: Dispositivos bloqueados
+    • refresh-token.entity.ts: Tokens de refresh armazenados
+    • trusted-device.entity.ts: Dispositivos confiáveis do usuário
+    
+    • blocks.schema.ts: Schemas de validação para bloqueios
+    • devices.schema.ts: Schemas de validação para dispositivos
+    
+    • decorators/
+      @CurrentUser() - Extrai usuário autenticado
+      
+    • guards/
+      - csrf.guard.ts: Proteção contra CSRF
+      - jwt.guard.ts: Validação de JWT
+      - rules.guard.ts: Validação de regras e permissões
+      
+    • interceptors/
+      - rate-limit.interceptor.ts: Rate limiting geral
+      - login-rate-limit.interceptor.ts: Rate limiting específico para login
+      
+    • jobs/
+      - token-cleanup.job.ts: Job agendado para limpar tokens expirados
+      - device-cleanup.job.ts: Job agendado para limpar dispositivos obsoletos
+      
+    • strategies/
+      - jwt.strategy.ts: Estratégia Passport para JWT
+      
+    • utils/
+      Funções utilitárias de autenticação
+      
+    • security-alerts.service.ts: Serviço de alertas de segurança
+    
+    RESPONSABILIDADES:
+    ✓ Gerenciar login/logout
+    ✓ Emitir e validar tokens JWT
+    ✓ Gerenciar refresh tokens
+    ✓ Bloquear contas suspeitas
+    ✓ Rastrear dispositivos confiáveis
+    ✓ Rate limiting
+    ✓ CSRF protection
+    ✓ Autorização por regras
+
+
+─── src/customers ──────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de clientes/customers da plataforma
+    
+    Contém:
+    
+    • customers.controller.ts: Endpoints para CRUD de clientes
+    • customers.module.ts: Módulo de clientes
+    • customers.schema.ts: Schemas de validação (Zod)
+    • customers.service.ts: Lógica de negócio de clientes
+    
+    • dto/ - Data Transfer Objects
+      - create-customer.dto.ts
+      - update-customer.dto.ts
+      - list-customer.dto.ts
+      - e outros DTOs específicos
+      
+    • entities/
+      - customer.entity.ts: Entidade principal
+      - e outras entidades relacionadas
+      
+    • http-bodies.ts: Tipos e interfaces de requisição/resposta
+    • README.md: Documentação específica do módulo
+    
+    RESPONSABILIDADES:
+    ✓ CRUD de clientes
+    ✓ Validação de dados de cliente
+    ✓ Integrações com ai-docs
+
+
+─── src/departments ────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de departamentos dentro de uma empresa
+    
+    Contém:
+    
+    • department.entity.ts: Entidade de departamento
+    • department-role.entity.ts: Relacionamento entre departamento e roles
+    • departments.controller.ts: Endpoints
+    • departments.module.ts: Módulo
+    • departments.schema.ts: Schemas de validação
+    • departments.service.ts: Lógica de negócio
+    
+    RESPONSABILIDADES:
+    ✓ CRUD de departamentos
+    ✓ Associar departamentos a usuários
+    ✓ Gerenciar roles por departamento
+
+
+─── src/i18n ──────────────────────────────────────────────────────────────────
+    PROPÓSITO: Internacionalização - suporte a múltiplos idiomas
+    
+    Contém:
+    
+    • en/ - Tradução em Inglês
+      - common.json: Mensagens comuns
+      - users.json: Mensagens do módulo users
+      - auth.json: Mensagens do módulo auth
+      - e outros arquivos por módulo
+      
+    • es/ - Tradução em Espanhol
+      (mesma estrutura de en/)
+      
+    • pt-BR/ - Tradução em Português (Brasil)
+      (mesma estrutura de en/)
+    
+    CONFIGURAÇÃO:
+    ✓ Idioma padrão: pt-BR
+    ✓ Detecção de idioma via:
+      - Query param: ?lang=en
+      - Cookie: lang=en
+      - Header Accept-Language
+      - Header customizado: x-lang
+
+
+─── src/org/company ────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de organizações e empresas
+    
+    Contém:
+    
+    • company.entity.ts: Entidade de empresa
+    • companies.controller.ts: Endpoints
+    • companies.module.ts: Módulo
+    • companies.schema.ts: Schemas de validação
+    • companies.service.ts: Lógica de negócio
+    
+    RESPONSABILIDADES:
+    ✓ CRUD de empresas
+    ✓ Gerenciar estrutura organizacional
+    ✓ Associar usuários a empresas
+
+
+─── src/privacy ────────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de campos sensíveis e privacidade
+    
+    Contém:
+    
+    • sensitive-field.entity.ts: Entidade que define qual campo é sensível
+    • sensitive-fields.controller.ts: Endpoints para gerenciar campos sensíveis
+    • sensitive-fields.module.ts: Módulo
+    • sensitive-fields.schema.ts: Schemas de validação
+    • sensitive-fields.service.ts: Lógica de negócio
+    
+    FUNCIONALIDADE:
+    ✓ Definir quais campos são sensíveis (ex: CPF, data de nascimento)
+    ✓ Controlar acesso a campos sensíveis via regras
+    ✓ Filtrar automaticamente dados sensíveis nas respostas
+    
+    EXEMPLO DE CAMPOS SENSÍVEIS:
+    - User.cpf (CPF do usuário)
+    - User.birthdate (Data de nascimento)
+
+
+─── src/roles ──────────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de papéis (roles) e permissões
+    
+    Contém:
+    
+    • role.entity.ts: Entidade de role/papel
+    • role-rule.entity.ts: Relacionamento entre role e regras
+    • roles.controller.ts: Endpoints
+    • roles.module.ts: Módulo
+    • roles.schema.ts: Schemas de validação
+    • roles.service.ts: Lógica de negócio
+    
+    RESPONSABILIDADES:
+    ✓ Criar e gerenciar roles (Admin, User, etc)
+    ✓ Associar regras a roles
+    ✓ Controlar permissões
+
+
+─── src/rules ──────────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de regras de negócio
+    
+    Contém:
+    
+    • rule.entity.ts: Entidade que define uma regra
+    • rules.controller.ts: Endpoints
+    • rules.module.ts: Módulo
+    • rules.schema.ts: Schemas de validação
+    • rules.service.ts: Lógica de negócio
+    
+    EXEMPLOS DE REGRAS:
+    - users.read - Ler dados de usuários
+    - users.create - Criar usuários
+    - users.update - Editar usuários
+    - users.delete - Deletar usuários
+    - users.read.pii - Ler dados sensíveis (PII = Personally Identifiable Info)
+    - privacy.read - Visualizar configurações de privacidade
+    - privacy.manage - Gerenciar campos sensíveis
+    
+    NOTA: A regra especial "administrator" (SUPER_RULE) bypassa todas as 
+    verificações de permissão.
+
+
+─── src/users ──────────────────────────────────────────────────────────────────
+    PROPÓSITO: Gerenciamento de usuários
+    
+    Contém:
+    
+    • user.entity.ts: Entidade do usuário com todos os campos
+    • users.controller.ts: Endpoints (CRUD + endpoints especiais)
+    • users.module.ts: Módulo
+    • users.schema.ts: Schemas de validação
+    • users.service.ts: Lógica de negócio
+    
+    • dto/ - Data Transfer Objects para diferentes operações
+      - create-user.dto.ts
+      - update-user.dto.ts
+      - list-user.dto.ts
+      - e outros
+    
+    RESPONSABILIDADES:
+    ✓ CRUD de usuários
+    ✓ Gerenciar dados sensíveis (CPF, data de nascimento)
+    ✓ Hash de senhas
+    ✓ Validação de email
+    ✓ Endpoint /users/me/profile para perfil do usuário logado
+
+
+─── src/utils ──────────────────────────────────────────────────────────────────
+    PROPÓSITO: Utilidades gerais do projeto
+    
+    Funções helper compartilhadas entre módulos
+
+
+─── src/app.controller.ts ──────────────────────────────────────────────────────
+    PROPÓSITO: Controller raiz da aplicação
+    
+    Define endpoints globais (health check, etc)
+
+
+─── src/app.module.ts ──────────────────────────────────────────────────────────
+    PROPÓSITO: Módulo raiz (bootstrap)
+    
+    Registra todos os módulos da aplicação:
+    ✓ Configuração
+    ✓ Internacionalização (i18n)
+    ✓ Banco de dados (TypeORM)
+    ✓ Redis
+    ✓ Email
+    ✓ WebSocket (realtime)
+    ✓ Todos os módulos de negócio
+
+
+─── src/app.service.ts ────────────────────────────────────────────────────────
+    PROPÓSITO: Serviço raiz da aplicação
+    
+    Contém lógica geral compartilhada
+
+
+─── src/main.ts ───────────────────────────────────────────────────────────────
+    PROPÓSITO: Ponto de entrada (bootstrap) da aplicação
+    
+    RESPONSABILIDADES:
+    ✓ Criar aplicação NestJS
+    ✓ Configurar validação global (ZodValidationPipe)
+    ✓ Configurar interceptors globais
+    ✓ Configurar filters globais
+    ✓ Habilitar CORS
+    ✓ Validar variáveis de ambiente obrigatórias
+    ✓ Configurar WebSocket
+    ✓ Iniciar servidor na porta configurada
+
+================================================================================
+                        PADRÕES DE ARQUITETURA
+================================================================================
+
+1. ESTRUTURA POR MÓDULO
+   Cada módulo segue o padrão:
+   ├── module.ts (bootstrap do módulo)
+   ├── controller.ts (endpoints HTTP)
+   ├── service.ts (lógica de negócio)
+   ├── entity.ts (modelo de dados)
+   ├── schema.ts (validação com Zod)
+   ├── dto/ (estruturas de dados)
+   └── [outros arquivos específicos]
+
+2. VALIDAÇÃO
+   - Usa Zod para validação robusta
+   - Schemas definidos em [nome].schema.ts
+   - Pipe global ZodValidationPipe em main.ts
+   - Mensagens de erro traduzidas via i18n
+
+3. TRATAMENTO DE ERRO
+   - Filters globais para exceções do TypeORM
+   - Filters globais para exceções do Multer
+   - I18n para mensagens localizadas
+
+4. AUTENTICAÇÃO E AUTORIZAÇÃO
+   - JWT via @nestjs/jwt
+   - Guards customizados (JwtGuard, RulesGuard, CsrfGuard)
+   - Decoradores customizados (@CurrentUser)
+
+5. INTERNACIONALIZAÇÃO
+   - I18n via nestjs-i18n
+   - Resolvers: Query params, Cookies, Headers, Accept-Language
+   - Fallback: pt-BR
+   - Tradução em 3 idiomas: pt-BR, en, es
+
+================================================================================
+                            DEPENDÊNCIAS CHAVE
+================================================================================
+
+• @nestjs/core - Framework NestJS
+• @nestjs/jwt - Autenticação via JWT
+• @nestjs/typeorm - ORM para banco de dados
+• @nestjs/platform-ws - WebSocket
+• @nestjs/schedule - Jobs agendados
+• nestjs-i18n - Internacionalização
+• zod - Validação de dados
+• redis - Cache e sessões
+• nodemailer - Envio de emails
+• openai - Integração com IA (GPT)
+
+================================================================================
+                          VARIÁVEIS DE AMBIENTE
+================================================================================
+
+OBRIGATÓRIAS:
+- ACCESS_TOKEN_SECRET: Chave para assinar JWTs
+- DATABASE_URL: URL de conexão com PostgreSQL/MySQL
+- EMAIL_TOKEN_SECRET: Chave para tokens de email
+- ACCESS_TOKEN_TTL: Tempo de vida do token (ex: 15m)
+- REFRESH_TOKEN_TTL: Tempo de vida do refresh token
+- PASSWORD_RESET_SECRET: Chave para tokens de reset
+- ALLOWED_ORIGINS: Origens permitidas para CORS
+- TRUST_IPV4_PREFIX/IPV6_PREFIX: Prefixos de IPs confiáveis
+- SMTP_HOST/PORT/USER/PASS: Configuração de email
+- MAIL_FROM: Email de origem
+- APP_WEB_URL: URL da aplicação web
+- SUPER_RULE: Regra de super admin (ex: "administrator")
+
+OPCIONAIS:
+- NODE_ENV: Ambiente (development/production)
+- PORT: Porta do servidor (padrão: 3000)
+- AI_TIMEOUT_MS: Timeout de chamadas de IA
+- AI_RAW_PREVIEW_LIMIT: Limite de preview de respostas de IA
+- AI_LOG_PROMPTS: Habilitar logging de prompts (0 ou 1)
+- AI_LOG_DIR: Diretório de logs de IA
+
+================================================================================
+                             FLUXO DE REQUEST
+================================================================================
+
+1. Request chega em main.ts
+2. Middleware global (CORS, cookie parser)
+3. Controller recebe a requisição
+4. ZodValidationPipe valida dados
+5. Guard valida autenticação/autorização
+6. Decorator extrai dados do usuário
+7. Controller passa para Service
+8. Service executa lógica de negócio
+9. Response formatada com i18n
+10. Interceptor adiciona headers de resposta
+11. Response retorna ao cliente
+
+================================================================================
+

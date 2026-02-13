@@ -1,0 +1,40 @@
+{
+    "failed": "Validation failed",
+    "phone": {
+        "required": "Phone is required",
+        "invalid": "Invalid phone. Enter only numbers"
+    },
+    "name": {
+        "required": "Name is required"
+    },
+    "email": {
+        "required": "Email is required",
+        "invalid_email": "Email must be valid"
+    },
+    "password": {
+        "required": "Password is required",
+        "min_length": "Password must have at least {minimum} characters",
+        "uppercase": "Password must contain at least one uppercase letter",
+        "lowercase": "Password must contain at least one lowercase letter",
+        "number": "Password must contain at least one number",
+        "special": "Password must contain at least one special character",
+        "must_differ": "New password must be different from current password"
+    },
+    "cpf": {
+        "required": "CPF is required",
+        "cpf_length": "CPF must have exactly 11 digits"
+    },
+    "cnpj": {
+        "cnpj_length": "CNPJ must have exactly 14 digits"
+    },
+    "website": {
+        "invalid_url": "Website URL must be valid"
+    },
+    "roleId": {
+        "required": "Role is required"
+    },
+    "invalid_date": "Invalid date",
+    "description": {
+        "invalid_type": "Description must be a string. Use null, empty string, or omit the field if you don't want to provide a description"
+    }
+}

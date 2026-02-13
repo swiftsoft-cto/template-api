@@ -1,0 +1,11 @@
+{
+  "found": "Empresa encontrada",
+  "not_found": "Empresa no encontrada",
+  "created": "Empresa creada exitosamente",
+  "updated": "Empresa actualizada exitosamente",
+  "deleted": "Empresa eliminada exitosamente",
+  "already_exists": "La empresa ya existe",
+  "name_already_exists": "Ya existe una empresa con este nombre",
+  "cnpj_already_exists": "Ya existe una empresa con este CNPJ",
+  "email_already_exists": "Ya existe una empresa con este email"
+}
