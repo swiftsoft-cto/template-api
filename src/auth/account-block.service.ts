@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../_common/redis/redis.service';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccountBlock } from './account-block.entity';
@@ -95,6 +95,7 @@ export class AccountBlockService {
 
     const row = await this.abRepo.save(
       this.abRepo.create({
+        id: randomUUID(),
         userId: params.userId ?? null,
         email: emailPlain,
         emailHash: eh,
