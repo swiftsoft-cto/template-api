@@ -1,6 +1,0 @@
-Sempre crie as versões de resosta no i18n em pt, en e es
-Sempre utilize softDelete
-
-No banco o campo é vector(1536) e no Prisma deve ser mapeado como Unsupported("vector(1536)").
-Consultas vetoriais (<->, <#>) devem ser executadas via prisma.$queryRaw.
-Para boost textual, use a coluna text_tsv com índice GIN.
