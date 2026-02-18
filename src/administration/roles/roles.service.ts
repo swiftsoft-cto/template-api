@@ -184,6 +184,39 @@ export class RolesService {
     return { message };
   }
 
+  async updateRuleForUser(
+    userId: string,
+    ruleId: string,
+    requesterId: string,
+    opts: { source?: 'manual' | 'payment'; expiresAt?: Date | null },
+  ) {
+    const lang = this.getLang();
+    await this.requireUserInCompanyOrThrow(userId, requesterId);
+
+    const existing = await this.userRuleRepo.findOne({
+      where: { userId, ruleId, revokedAt: null } as any,
+      select: { id: true } as any,
+    });
+    if (!existing) {
+      throw new NotFoundException(
+        await this.i18n.translate('common.not_found', { lang }),
+      );
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (opts.source !== undefined) updateData.source = opts.source;
+    if (opts.expiresAt !== undefined) updateData.expiresAt = opts.expiresAt;
+
+    if (Object.keys(updateData).length) {
+      await this.userRuleRepo.update({ userId, ruleId }, updateData as any);
+    }
+
+    await this.redis.del(`authz:rules:${userId}`);
+
+    const message = await this.i18n.translate('roles.rule_updated', { lang });
+    return { message };
+  }
+
   async create(data: CreateRoleInput, requesterId: string) {
     const lang = this.getLang();
     const companyId = await this.requesterCompanyId(requesterId);

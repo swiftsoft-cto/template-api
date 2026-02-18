@@ -13,6 +13,9 @@
   "user_not_in_company": "El usuario no pertenece a la misma empresa que el rol",
   "rules_listed": "Reglas listadas exitosamente",
   "rules_empty": "No se encontraron reglas",
+  "rule_linked": "Regla vinculada exitosamente",
+  "rule_updated": "Regla actualizada exitosamente",
+  "rule_unlinked": "Regla desvinculada exitosamente",
   "departments_listed": "Departamentos listados exitosamente",
   "department_linked": "Departamento vinculado al rol exitosamente",
   "department_unlinked": "Departamento desvinculado del rol exitosamente"

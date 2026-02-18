@@ -13,6 +13,9 @@
   "user_not_in_company": "User does not belong to the same company as the role",
   "rules_listed": "Rules listed successfully",
   "rules_empty": "No rules found",
+  "rule_linked": "Rule linked successfully",
+  "rule_updated": "Rule updated successfully",
+  "rule_unlinked": "Rule unlinked successfully",
   "departments_listed": "Departments listed successfully",
   "department_linked": "Department linked to role successfully",
   "department_unlinked": "Department unlinked from role successfully"

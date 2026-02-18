@@ -246,3 +246,32 @@ export const paginationSchema = z.object({
 });
 
 export type PaginationInput = z.infer<typeof paginationSchema>;
+
+// Schemas para regras extras do usuário
+export const addExtraRuleSchema = z.object({
+  ruleId: z.string().uuid({ message: 'validation.ruleId.required' }),
+  source: z.enum(['manual', 'payment']).default('manual'),
+  expiresAt: z
+    .preprocess((val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      if (typeof val === 'string' || typeof val === 'number')
+        return new Date(val);
+      return val;
+    }, z.date().nullable().optional())
+    .optional(),
+});
+
+export const updateExtraRuleSchema = z.object({
+  source: z.enum(['manual', 'payment']).optional(),
+  expiresAt: z
+    .preprocess((val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      if (typeof val === 'string' || typeof val === 'number')
+        return new Date(val);
+      return val;
+    }, z.date().nullable().optional())
+    .optional(),
+});
+
+export type AddExtraRuleInput = z.infer<typeof addExtraRuleSchema>;
+export type UpdateExtraRuleInput = z.infer<typeof updateExtraRuleSchema>;

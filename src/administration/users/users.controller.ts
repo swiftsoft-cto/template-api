@@ -27,6 +27,8 @@ import {
   createUserSchema,
   updateUserSchema,
   paginationSchema,
+  addExtraRuleSchema,
+  updateExtraRuleSchema,
 } from './users.schema';
 import { Authz } from '../../auth/decorators/rule.decorator';
 import { User } from '../../_common/decorators/user.decorator';
@@ -45,6 +47,12 @@ class UpdateUserDto {
 }
 class PaginationDto {
   static schema = paginationSchema;
+}
+class AddExtraRuleDto {
+  static schema = addExtraRuleSchema;
+}
+class UpdateExtraRuleDto {
+  static schema = updateExtraRuleSchema;
 }
 
 @Controller('users')
@@ -178,6 +186,36 @@ export class UsersController {
     @User('userId') requesterId: string,
   ) {
     return this.rolesService.listUserExtraRules(id, requesterId);
+  }
+
+  @Post(':id/extra-rules')
+  @Authz('users.update')
+  @HttpCode(HttpStatus.CREATED)
+  addUserExtraRule(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: AddExtraRuleDto,
+    @User('userId') requesterId: string,
+  ) {
+    const { ruleId, source, expiresAt } = body as any;
+    return this.rolesService.addRuleToUser(id, ruleId, requesterId, {
+      source,
+      expiresAt: expiresAt ?? null,
+    });
+  }
+
+  @Patch(':id/extra-rules/:ruleId')
+  @Authz('users.update')
+  updateUserExtraRule(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('ruleId', new ParseUUIDPipe()) ruleId: string,
+    @Body() body: UpdateExtraRuleDto,
+    @User('userId') requesterId: string,
+  ) {
+    const { source, expiresAt } = body as any;
+    return this.rolesService.updateRuleForUser(id, ruleId, requesterId, {
+      ...(source !== undefined && { source }),
+      ...(expiresAt !== undefined && { expiresAt }),
+    });
   }
 
   @Delete(':id/extra-rules/:ruleId')
