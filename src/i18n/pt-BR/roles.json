@@ -10,7 +10,7 @@
   "user_unlinked": "Usuário desvinculado da função com sucesso",
   "user_roles_listed": "Funções do usuário listadas com sucesso",
   "name_already_exists": "Já existe uma função com este nome nesta empresa",
-  "user_not_in_company": "Usuário não pertence à mesma empresa da função",
+  "user_not_in_company": "Usuário não pertence à mesma empresa da função","cannot_remove_own_admin_role":"Você não pode remover a função de administrador da sua própria conta.","last_admin_cannot_change":"Não é possível alterar a função do último administrador. Mantenha pelo menos um ativo.","admin_removed_warning":"Atenção: o administrador foi removido da função.",
   "rules_listed": "Regras listadas com sucesso",
   "rules_empty": "Nenhuma regra encontrada",
   "rule_linked": "Regra vinculada com sucesso",

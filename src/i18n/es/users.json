@@ -8,5 +8,5 @@
   "empty": "No se encontraron usuarios.",
   "email_already_exists": "El correo ya existe",
   "email_soft_deleted": "No se puede crear una nueva cuenta con un correo que ya fue eliminado.",
-  "already_deleted": "El usuario ya fue eliminado."
+  "already_deleted": "El usuario ya fue eliminado.","last_admin_cannot_remove":"No se puede eliminar al último administrador. Mantenga al menos uno activo.","admin_removed_warning":"Advertencia: un administrador fue eliminado del sistema."
 } 

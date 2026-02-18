@@ -168,8 +168,11 @@ export class UsersController {
 
   @Delete(':id')
   @Authz('users.delete')
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @User('userId') requesterId: string,
+  ) {
+    return this.usersService.remove(id, requesterId);
   }
 
   // Relacionamentos com role
@@ -233,14 +236,18 @@ export class UsersController {
   setRole(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('roleId', new ParseUUIDPipe()) roleId: string,
+    @User('userId') requesterId: string,
   ) {
-    return this.rolesService.setUserRole(id, roleId);
+    return this.rolesService.setUserRole(id, roleId, requesterId);
   }
 
   @Delete(':id/role')
   @Authz('users.role.delete')
-  clearRole(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.rolesService.clearUserRole(id);
+  clearRole(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @User('userId') requesterId: string,
+  ) {
+    return this.rolesService.clearUserRole(id, requesterId);
   }
 
   // BLOQUEAR ACESSO (ADMIN)

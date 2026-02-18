@@ -42,8 +42,26 @@ export class UsersService {
     private sfService: SensitiveFieldsService,
   ) {}
 
+  private readonly ADMIN_ROLE_NAME =
+    process.env.ADMIN_ROLE_NAME ?? 'Administrador';
+
   private getLang() {
     return I18nContext.current()?.lang;
+  }
+
+  private async countAdminsInCompany(companyId: string): Promise<number> {
+    const adminRole = await this.rolesRepo.findOne({
+      where: { companyId, name: this.ADMIN_ROLE_NAME, deletedAt: IsNull() },
+      select: { id: true },
+    } as any);
+    if (!adminRole) return 0;
+    return this.usersRepo.count({
+      where: {
+        companyId,
+        roleId: adminRole.id,
+        deletedAt: IsNull(),
+      } as any,
+    });
   }
 
   private readonly BASE_SELECT = {
@@ -393,26 +411,53 @@ export class UsersService {
     return this.updateDynamic(id, sanitized as any, { requesterId: id });
   }
 
-  async remove(id: string) {
+  async remove(id: string, requesterId: string) {
     const lang = this.getLang();
 
-    // Verifica se já está soft-deleted usando bypass do middleware
-    const existing = await this.usersRepo
-      .createQueryBuilder('u')
-      .select(['u.deleted_at'])
-      .where('u.id = :id', { id })
-      .getRawOne<{ u_deleted_at: Date | null }>();
+    const user = await this.usersRepo.findOne({
+      where: { id } as any,
+      relations: ['role'],
+      select: {
+        id: true,
+        companyId: true,
+        deletedAt: true,
+        role: { id: true, name: true },
+      },
+    } as any);
 
-    if (!existing) {
+    if (!user) {
       throw new NotFoundException(
         await this.i18n.translate('users.not_found', { lang, args: { id } }),
       );
     }
 
-    if ((existing as any).u_deleted_at !== null) {
+    if ((user as any).deletedAt) {
       throw new ConflictException(
         await this.i18n.translate('users.already_deleted', { lang }),
       );
+    }
+
+    const role = (user as any).role;
+    const isAdmin = role?.name === this.ADMIN_ROLE_NAME;
+    const isSelf = id === requesterId;
+
+    if (isSelf && isAdmin) {
+      throw new ConflictException(
+        await this.i18n.translate('roles.cannot_remove_own_admin_role', {
+          lang,
+        }),
+      );
+    }
+
+    if (isAdmin && !isSelf) {
+      const adminCount = await this.countAdminsInCompany(
+        (user as any).companyId,
+      );
+      if (adminCount <= 1) {
+        throw new ConflictException(
+          await this.i18n.translate('users.last_admin_cannot_remove', { lang }),
+        );
+      }
     }
 
     // Soft delete e revoga todos os RTs
@@ -428,7 +473,11 @@ export class UsersService {
     await this.redis.del(`authz:rules:${id}`);
 
     const message = await this.i18n.translate('users.deleted', { lang });
-    return { message };
+    const warning =
+      isAdmin && !isSelf
+        ? await this.i18n.translate('users.admin_removed_warning', { lang })
+        : undefined;
+    return warning ? { message, warning } : { message };
   }
 
   /**
@@ -756,6 +805,8 @@ export class UsersService {
 
     let shouldRevokeTokens = false;
     let roleChanged = false;
+    let adminRemovedWarning = false;
+    let roleChangeSkippedOwnAdmin = false;
 
     if (data.password) {
       const hash = await bcrypt.hash(data.password, 12);
@@ -774,28 +825,72 @@ export class UsersService {
 
     if ((data as any).roleId !== undefined) {
       const newRoleId = (data as any).roleId;
+      const currentRoleId = (current as any).roleId;
+      const companyId = (current as any).companyId;
+      const isSelf = id === ctx.requesterId;
+
+      let currentRoleName: string | null = null;
+      if (currentRoleId) {
+        const cr = await this.rolesRepo.findOne({
+          where: { id: currentRoleId } as any,
+          select: { name: true } as any,
+        });
+        currentRoleName = (cr as any)?.name ?? null;
+      }
+
+      const isCurrentlyAdmin = currentRoleName === this.ADMIN_ROLE_NAME;
+
       if (newRoleId === null) {
-        updateData.roleId = null;
-        roleChanged = (current as any).roleId !== null;
+        if (isSelf && isCurrentlyAdmin) {
+          roleChangeSkippedOwnAdmin = true;
+          // Não aplica alteração de role; resto do update segue normalmente
+        } else         if (isCurrentlyAdmin && !isSelf) {
+          const adminCount = await this.countAdminsInCompany(companyId);
+          if (adminCount <= 1) {
+            throw new ConflictException(
+              await this.i18n.translate('roles.last_admin_cannot_change', {
+                lang: this.getLang(),
+              }),
+            );
+          }
+        }
+        if (!roleChangeSkippedOwnAdmin) {
+          updateData.roleId = null;
+          roleChanged = currentRoleId !== null;
+          adminRemovedWarning = isCurrentlyAdmin && !isSelf;
+        }
       } else {
         const role = await this.rolesRepo.findOneOrFail({
           where: { id: newRoleId, deletedAt: IsNull() } as any,
-          select: { id: true, companyId: true } as any,
+          select: { id: true, companyId: true, name: true } as any,
         } as any);
-        if (
-          (current as any).companyId &&
-          (current as any).companyId !== (role as any).companyId
-        ) {
+        if (companyId && companyId !== (role as any).companyId) {
           throw new ConflictException(
             await this.i18n.translate('roles.user_not_in_company', {
               lang: this.getLang(),
             }),
           );
         }
-        updateData.roleId = role.id;
-        if (!(current as any).companyId)
-          updateData.companyId = (role as any).companyId;
-        roleChanged = (current as any).roleId !== role.id;
+        const willBeAdmin = (role as any).name === this.ADMIN_ROLE_NAME;
+        if (isSelf && isCurrentlyAdmin && !willBeAdmin) {
+          roleChangeSkippedOwnAdmin = true;
+          // Não aplica alteração de role; resto do update segue normalmente
+        } else         if (isCurrentlyAdmin && !willBeAdmin && !isSelf) {
+          const adminCount = await this.countAdminsInCompany(companyId);
+          if (adminCount <= 1) {
+            throw new ConflictException(
+              await this.i18n.translate('roles.last_admin_cannot_change', {
+                lang: this.getLang(),
+              }),
+            );
+          }
+        }
+        if (!roleChangeSkippedOwnAdmin) {
+          updateData.roleId = role.id;
+          if (!companyId) updateData.companyId = (role as any).companyId;
+          roleChanged = currentRoleId !== role.id;
+          adminRemovedWarning = isCurrentlyAdmin && !willBeAdmin && !isSelf;
+        }
       }
     }
 
@@ -827,10 +922,24 @@ export class UsersService {
       await this.redis.del(`authz:rules:${id}`);
     }
 
+    let message = await this.i18n.translate('users.updated', {
+      lang: I18nContext.current()?.lang,
+    });
+    const warning = adminRemovedWarning
+      ? await this.i18n.translate('roles.admin_removed_warning', {
+          lang: I18nContext.current()?.lang,
+        })
+      : roleChangeSkippedOwnAdmin
+        ? await this.i18n.translate('roles.cannot_remove_own_admin_role', {
+            lang: I18nContext.current()?.lang,
+          })
+        : undefined;
+    if (roleChangeSkippedOwnAdmin && warning) {
+      message = warning;
+    }
     return {
-      message: await this.i18n.translate('users.updated', {
-        lang: I18nContext.current()?.lang,
-      }),
+      message,
+      ...(warning && { warning }),
       data: user,
     };
   }

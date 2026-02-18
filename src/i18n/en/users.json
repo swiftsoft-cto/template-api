@@ -8,5 +8,5 @@
   "empty": "No users found.",
   "email_already_exists": "Email already exists",
   "email_soft_deleted": "Cannot create a new account with an email that was already removed.",
-  "already_deleted": "User is already removed."
+  "already_deleted": "User is already removed.","last_admin_cannot_remove":"Cannot remove the last administrator. Keep at least one active.","admin_removed_warning":"Warning: an administrator was removed from the system."
 } 

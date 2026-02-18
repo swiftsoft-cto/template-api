@@ -44,8 +44,30 @@ export class RolesService {
     private i18n: I18nService,
   ) {}
 
+  private readonly ADMIN_ROLE_NAME =
+    process.env.ADMIN_ROLE_NAME ?? 'Administrador';
+
   private getLang() {
     return I18nContext.current()?.lang;
+  }
+
+  private async countAdminsInCompany(companyId: string): Promise<number> {
+    const adminRole = await this.roleRepo.findOne({
+      where: {
+        companyId,
+        name: this.ADMIN_ROLE_NAME,
+        deletedAt: null as any,
+      },
+      select: { id: true },
+    });
+    if (!adminRole) return 0;
+    return this.userRepo.count({
+      where: {
+        companyId,
+        roleId: adminRole.id,
+        deletedAt: null as any,
+      },
+    });
   }
 
   private async requesterCompanyId(requesterId: string) {
@@ -450,48 +472,119 @@ export class RolesService {
     return { message, data: users };
   }
 
-  async setUserRole(userId: string, roleId: string) {
+  async setUserRole(userId: string, roleId: string, requesterId: string) {
     const lang = this.getLang();
 
     const user = await this.userRepo.findOne({
       where: { id: userId, deletedAt: null } as any,
-      select: { id: true, companyId: true } as any,
+      relations: ['role'],
+      select: {
+        id: true,
+        companyId: true,
+        roleId: true,
+        role: { id: true, name: true },
+      } as any,
     });
-    const role = await this.roleRepo.findOne({
+    const newRole = await this.roleRepo.findOne({
       where: { id: roleId, deletedAt: null } as any,
-      select: { id: true, companyId: true } as any,
+      select: { id: true, companyId: true, name: true } as any,
     });
 
-    if (!user || !role) {
+    if (!user || !newRole) {
       throw new NotFoundException(
         await this.i18n.translate('common.not_found', { lang }),
       );
     }
 
-    if (!user.companyId || user.companyId !== role.companyId) {
+    if (!user.companyId || user.companyId !== newRole.companyId) {
       throw new ConflictException(
         await this.i18n.translate('roles.user_not_in_company', { lang }),
       );
     }
 
-    await this.userRepo.update({ id: user.id }, { roleId: role.id } as any);
+    const currentRole = (user as any).role;
+    const isCurrentlyAdmin = currentRole?.name === this.ADMIN_ROLE_NAME;
+    const willBeAdmin = newRole.name === this.ADMIN_ROLE_NAME;
+    const isSelf = userId === requesterId;
 
-    // invalida cache de regras
+    if (isSelf && isCurrentlyAdmin && !willBeAdmin) {
+      throw new ConflictException(
+        await this.i18n.translate('roles.cannot_remove_own_admin_role', {
+          lang,
+        }),
+      );
+    }
+
+    if (isCurrentlyAdmin && !willBeAdmin && !isSelf) {
+      const adminCount = await this.countAdminsInCompany(user.companyId!);
+      if (adminCount <= 1) {
+        throw new ConflictException(
+          await this.i18n.translate('roles.last_admin_cannot_change', { lang }),
+        );
+      }
+    }
+
+    await this.userRepo.update({ id: user.id }, { roleId: newRole.id } as any);
+
     await this.redis.del(`authz:rules:${user.id}`);
 
     const message = await this.i18n.translate('roles.user_linked', { lang });
-    return { message };
+    const warning =
+      isCurrentlyAdmin && !willBeAdmin && !isSelf
+        ? await this.i18n.translate('roles.admin_removed_warning', { lang })
+        : undefined;
+    return warning ? { message, warning } : { message };
   }
 
-  async clearUserRole(userId: string) {
+  async clearUserRole(userId: string, requesterId: string) {
     const lang = this.getLang();
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId, deletedAt: null } as any,
+      relations: ['role'],
+      select: {
+        id: true,
+        companyId: true,
+        role: { id: true, name: true },
+      } as any,
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        await this.i18n.translate('common.not_found', { lang }),
+      );
+    }
+
+    const currentRole = (user as any).role;
+    const isCurrentlyAdmin = currentRole?.name === this.ADMIN_ROLE_NAME;
+    const isSelf = userId === requesterId;
+
+    if (isSelf && isCurrentlyAdmin) {
+      throw new ConflictException(
+        await this.i18n.translate('roles.cannot_remove_own_admin_role', {
+          lang,
+        }),
+      );
+    }
+
+    if (isCurrentlyAdmin && !isSelf) {
+      const adminCount = await this.countAdminsInCompany(user.companyId!);
+      if (adminCount <= 1) {
+        throw new ConflictException(
+          await this.i18n.translate('roles.last_admin_cannot_change', { lang }),
+        );
+      }
+    }
 
     await this.userRepo.update({ id: userId }, { roleId: null } as any);
 
     await this.redis.del(`authz:rules:${userId}`);
 
     const message = await this.i18n.translate('roles.user_unlinked', { lang });
-    return { message };
+    const warning = isCurrentlyAdmin
+      ? await this.i18n.translate('roles.admin_removed_warning', { lang })
+      : undefined;
+    return warning ? { message, warning } : { message };
   }
 
   async getUserRole(userId: string) {

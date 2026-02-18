@@ -8,6 +8,6 @@
   "email_already_exists": "Email já está em uso",
   "invalid_credentials": "Credenciais inválidas",
   "email_soft_deleted": "Não é possível criar uma nova conta com um e-mail que já foi removido.",
-  "already_deleted": "Usuário já está removido.",
+  "already_deleted": "Usuário já está removido.","last_admin_cannot_remove":"Não é possível remover o último administrador. Mantenha pelo menos um ativo.","admin_removed_warning":"Atenção: um administrador foi removido do sistema.",
   "empty": "Nenhum usuário encontrado."
 } 

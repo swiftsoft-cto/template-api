@@ -10,7 +10,7 @@
   "user_unlinked": "User unlinked from role successfully",
   "user_roles_listed": "User roles listed successfully",
   "name_already_exists": "A role with this name already exists in this company",
-  "user_not_in_company": "User does not belong to the same company as the role",
+  "user_not_in_company": "User does not belong to the same company as the role","cannot_remove_own_admin_role":"You cannot remove the administrator role from your own account.","last_admin_cannot_change":"Cannot change the last administrator's role. Keep at least one active.","admin_removed_warning":"Warning: the administrator was removed from the role.",
   "rules_listed": "Rules listed successfully",
   "rules_empty": "No rules found",
   "rule_linked": "Rule linked successfully",

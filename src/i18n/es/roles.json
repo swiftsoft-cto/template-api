@@ -10,7 +10,7 @@
   "user_unlinked": "Usuario desvinculado del rol exitosamente",
   "user_roles_listed": "Roles del usuario listados exitosamente",
   "name_already_exists": "Ya existe un rol con este nombre en esta empresa",
-  "user_not_in_company": "El usuario no pertenece a la misma empresa que el rol",
+  "user_not_in_company": "El usuario no pertenece a la misma empresa que el rol","cannot_remove_own_admin_role":"No puede quitar el rol de administrador de su propia cuenta.","last_admin_cannot_change":"No se puede cambiar el rol del último administrador. Mantenga al menos uno activo.","admin_removed_warning":"Advertencia: el administrador fue removido del rol.",
   "rules_listed": "Reglas listadas exitosamente",
   "rules_empty": "No se encontraron reglas",
   "rule_linked": "Regla vinculada exitosamente",
